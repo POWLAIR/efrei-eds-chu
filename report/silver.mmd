@@ -1,7 +1,7 @@
 erDiagram
-    patients ||--o{ sejours : "patient_hash"
-    sejours  ||--o{ monitoring : "stay_id"
-    sejours  ||--o{ diagnostics : "stay_id"
+    patients    ||--o{ sejours     : "patient_hash"
+    sejours     ||--o{ diagnostics : "stay_id"
+    pathologies ||--o{ diagnostics : "code_cim10"
 
     patients {
         String patient_hash PK "pseudonyme SHA-256 salé"
@@ -19,22 +19,19 @@ erDiagram
         String discharge_mode "domicile | mutation | transfert | deces"
         Float64 los_hours "durée — NULL si en cours"
     }
-    monitoring {
+    diagnostics {
         String stay_id FK "rattaché à un séjour valide"
+        String code_cim10 FK "présent au référentiel cim10"
+        String type "principal | associe"
+    }
+    pathologies {
+        String code_cim10 PK "référentiel CIM-10 matérialisé (codes observés en diagnostics)"
+        String libelle "libellé repris de bronze.ref_cim10"
+    }
+    monitoring {
+        String stay_id "identifiant de séjour — flux autonome, non contraint"
         DateTime ts "PARTITION BY jour"
         Int32 heart_rate "20-250 bpm, nullable"
         Int32 spo2 "50-100 pourcent, nullable"
         Float32 temp_c "30-45 degC, nullable"
-    }
-    diagnostics {
-        String stay_id FK
-        String code_cim10 "présent au référentiel cim10"
-        String type "principal | associe"
-    }
-    rejects {
-        String source "table d'origine"
-        String natural_key "clé de la ligne écartée"
-        String rule "code du contrôle violé"
-        String detail
-        DateTime detected_at
     }

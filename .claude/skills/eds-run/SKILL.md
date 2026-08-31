@@ -5,15 +5,17 @@ description: Lancer, rejouer et repriser le pipeline de l'Entrepôt de Données 
 
 # Exécuter le pipeline EDS du CHU
 
-Pipeline ELT médaillon : `source-filestorage` → lake (pseudonymisé) → bronze → silver → gold (ClickHouse) → Metabase.
+Pipeline ELT médaillon : `source-filestorage` → lake (pseudonymisé) → bronze → clean → silver → gold (ClickHouse) → Metabase.
 Python **pilote** uniquement ; toutes les transformations sont en SQL dans `sql/`.
+L'étape `clean` ne contient que le journal de quarantaine `clean.rejects` (lignes
+écartées par les contrôles qualité), alimenté pendant l'étape silver.
 
 ## Prérequis
 
 1. `.env` présent (`cp .env.example .env`) avec **`PSEUDO_SALT`** renseigné (secret, non committé).
 2. `make install` (dépendances `uv`).
 3. `make up` — ClickHouse (`:8123/play`) + Metabase (`:3000`) démarrés et *healthy* (`docker compose ps`).
-4. `make init-db` — crée `meta`, `bronze`, `silver`, `gold` + users `ro_pilotage` / `ro_recherche`.
+4. `make init-db` — crée `meta`, `bronze`, `clean`, `silver`, `gold` + users `ro_pilotage` / `ro_recherche`.
 
 ## Exécution nominale (dépôt quotidien)
 
@@ -35,11 +37,12 @@ Chaîne complète à froid : `make all` (seed + up + init-db + ingest + transfor
 SELECT count() FROM bronze.patients;                    -- 16200 sur les 3 jours
 SELECT count() FROM silver.patients;                    -- 6000 (déduplication)
 SELECT count() FROM silver.sejours;                     -- 14864 (= gold.fact_sejour)
-SELECT source, rule, count() FROM silver.rejects GROUP BY 1,2 ORDER BY 3 DESC;
+SELECT count() FROM silver.pathologies;                 -- codes CIM-10 observés en diagnostics
+SELECT source, rule, count() FROM clean.rejects GROUP BY 1,2 ORDER BY 3 DESC;
 SELECT * FROM gold.kpi_recherche_prevalence;            -- aucune cohorte < 5
 ```
 
-Ou, plus simple : `make verify` — 7 contrôles de réconciliation, exit ≠ 0 si un chiffre ne colle pas.
+Ou, plus simple : `make verify` — 8 contrôles de réconciliation, exit ≠ 0 si un chiffre ne colle pas.
 
 ## Reprise sur incident
 

@@ -7,7 +7,8 @@ flowchart LR
     FS["source-filestorage/<br/>dépôt quotidien<br/>(lecture seule)"]
     LK["Lake<br/>copie brute<br/>+ pseudonymisée"]
     BR["Bronze<br/>tables typées<br/>(peu transformé)"]
-    SV["Silver<br/>nettoyé, dédup,<br/>qualité + rejets tracés"]
+    SV["Silver<br/>nettoyé, dédup, relié<br/>patients→sejours→diagnostics→pathologies"]
+    CL["Clean<br/>journal de quarantaine<br/>clean.rejects (audit)"]
     GD["Gold<br/>KPI par usage<br/>pilotage / recherche (k≥5)"]
     DB["Dashboards<br/>Metabase<br/>2 dashboards + cloisonnement"]
 
@@ -15,6 +16,7 @@ flowchart LR
     LK -->|"file() / Parquet"| BR
     BR -->|"SQL"| SV
     SV -->|"SQL"| GD
+    SV -.->|"lignes écartées"| CL
     GD -->|"SELECT (users RBAC)"| DB
 
     META["meta.runs · meta.ingested_files<br/>(traçabilité + incrémental)"]
@@ -28,7 +30,8 @@ flowchart LR
 |---|---|---|
 | **Lake** | copie brute, telle quelle (mais pseudonymisée pour patients/séjours) | fichiers sur disque `data/lake/` |
 | **Bronze** | tables typées, peu transformées, 1 table par source | ClickHouse `bronze.*` |
-| **Silver** | nettoyé, cohérent, dédupliqué, enrichi ; ce qu'on écarte est tracé | ClickHouse `silver.*` + `silver.rejects` |
+| **Clean** | journal de quarantaine des lignes écartées — artefact opérationnel d'audit, **non analytique** (alimenté pendant l'étape silver) | ClickHouse `clean.rejects` |
+| **Silver** | nettoyé, cohérent, dédupliqué, **relié** : `patients → sejours → diagnostics → pathologies` ; `monitoring` = flux autonome | ClickHouse `silver.*` |
 | **Gold** | indicateurs agrégés **par usage** | ClickHouse `gold.*` (dims/fact = tables, KPI = vues) |
 
 ## Stack (tourne sur un laptop)
