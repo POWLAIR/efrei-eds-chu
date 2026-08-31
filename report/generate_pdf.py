@@ -201,6 +201,17 @@ def callout(text_html: str):
     return t
 
 
+# Hauteur max par figure. Défaut volontairement modéré pour qu'une figure tienne
+# dans le bas d'une page courante ; on ajuste au cas par cas : schéma ER dense =
+# plus de place, captures d'écran peu denses = moins.
+_MAX_H = {
+    "silver.png": 122 * mm,
+    "01-cloisonnement-recherche.png": 92 * mm,
+    "02-rbac-clickhouse-denied.png": 96 * mm,
+}
+_MAX_H_DEFAULT = 114 * mm
+
+
 def scaled_image(src: str) -> Image | None:
     p = (BASE / src).resolve()
     if not p.exists():
@@ -209,7 +220,7 @@ def scaled_image(src: str) -> Image | None:
     img = Image(str(p))
     ratio = img.imageHeight / img.imageWidth
     max_w = CONTENT_W
-    max_h = 168 * mm  # laisse la place à un titre + une légende sur la même page
+    max_h = _MAX_H.get(Path(src).name, _MAX_H_DEFAULT)
     w = min(max_w, img.imageWidth)
     h = w * ratio
     if h > max_h:
@@ -265,9 +276,11 @@ def build_story(md_text: str) -> list:
             heading = Paragraph(content, ST[style])
             i += 3
 
-            # Le bloc qui suit (paragraphe ou image) reste solidaire du titre :
-            # jamais de titre seul en bas de page.
+            # Le titre reste solidaire de sa figure (jamais de titre seul en bas de
+            # page, jamais de figure orpheline) ; le paragraphe descriptif SOUS la
+            # figure, lui, coule librement -> il remplit le bas de page.
             block: list = [heading]
+            trailing: list = []
             if i < len(tokens) and tokens[i].type == "paragraph_open":
                 imgs, txt = split_images(tokens[i + 1])
                 for src, alt in imgs:
@@ -277,21 +290,18 @@ def build_story(md_text: str) -> list:
                         if alt:
                             block.append(Paragraph(html.escape(alt), ST["caption"]))
                 if txt:
-                    block.append(Paragraph(txt, ST["caption"] if imgs else ST["body"]))
+                    (trailing if imgs else block).append(
+                        Paragraph(txt, ST["caption"] if imgs else ST["body"])
+                    )
                 if imgs or txt:
                     i += 3
 
-            # Réserve : si la section (jusqu'au prochain titre) contient une figure,
-            # on garde de la place pour titre + intro + figure -> la section entière
-            # bascule à la page suivante plutôt que de laisser le titre seul.
-            if len(block) > 1 and isinstance(block[1], Image):
-                reserve = 78 * mm
-            elif _section_has_image(tokens, i, lvl):
-                reserve = 185 * mm
-            else:
-                reserve = 40 * mm
+            # Réserve courte : juste de quoi éviter un titre en dernière ligne.
+            # Le KeepTogether ci-dessous fait le vrai travail anti-coupure.
+            reserve = 40 * mm if _section_has_image(tokens, i, lvl) else 30 * mm
             story.append(CondPageBreak(reserve))
             story.append(KeepTogether(block) if len(block) > 1 else heading)
+            story.extend(trailing)
             continue
 
         if tt == "paragraph_open":

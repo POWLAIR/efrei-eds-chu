@@ -1,38 +1,20 @@
-flowchart TB
-    FS["source-filestorage/&lt;date&gt;/<br/>patients.csv · sejours.csv · diagnostics.json<br/>monitoring.parquet · referentiels/*.csv<br/><i>lecture seule — dépôt quotidien</i>"]
+flowchart LR
+    FS["<b>source-filestorage</b><br/>dépôt quotidien · lecture seule<br/>CSV · JSON · Parquet"]
 
-    subgraph PY["Orchestration — Python (CLI eds)"]
-        direction TB
-        ING["ingest : copie filestorage → lake<br/>incrémental (hash) · pseudonymisation RGPD"]
-        TR["transform : envoie le SQL à ClickHouse<br/>(aucune donnée sortie du moteur)"]
-        VF["verify : réconciliation KPI ↔ sources<br/>k-anonymat · cohérence"]
-    end
-
-    subgraph CH["Entrepôt — ClickHouse (colonne, partitionné)"]
-        direction TB
-        LK["LAKE — data/lake/<br/>copie brute, patients/séjours pseudonymisés"]
-        BR["BRONZE — tables typées<br/>1 table par source"]
-        SV["SILVER — nettoyé · dédupliqué<br/>contrôles qualité → silver.rejects"]
-        GD["GOLD — dim_* · fact_sejour<br/>vues kpi_pilotage_* / kpi_recherche_* (k ≥ 5)"]
+    subgraph CH["ClickHouse — transformations 100 % SQL"]
+        direction LR
+        LK["<b>Lake</b><br/>copie brute<br/>pseudonymisée"]
+        BR["<b>Bronze</b><br/>tables typées<br/>1 / source"]
+        SV["<b>Silver</b><br/>nettoyé · dédup · relié<br/>patients → sejours →<br/>diagnostics → pathologies<br/><i>monitoring autonome</i>"]
+        GD["<b>Gold</b><br/>dim_* · fact_sejour<br/>vues KPI (k ≥ 5)"]
         LK --> BR --> SV --> GD
     end
 
-    subgraph MB["Restitution — Metabase"]
-        direction TB
-        DPIL["Dashboard Pilotage<br/>(groupe Pilotage · user ro_pilotage)"]
-        DREC["Dashboard Recherche<br/>(groupe Recherche · user ro_recherche)"]
-    end
+    CLN["<b>Clean</b> · clean.rejects<br/>journal de quarantaine (audit)"]
+    MB["<b>Metabase</b><br/>2 dashboards · cloisonnement<br/>ro_pilotage / ro_recherche"]
+    META["<b>meta.runs</b> · <b>meta.ingested_files</b><br/>traçabilité + incrémental"]
 
-    META["meta.runs · meta.ingested_files<br/><i>traçabilité + incrémental</i>"]
-
-    FS -->|"flux entrant"| ING
-    ING --> LK
-    TR -.pilote.-> BR
-    TR -.pilote.-> SV
-    TR -.pilote.-> GD
-    VF -.contrôle.-> GD
-    GD -->|"SELECT — RBAC ClickHouse"| DPIL
-    GD -->|"SELECT — RBAC ClickHouse"| DREC
-    ING -.trace.-> META
-    TR -.trace.-> META
-    VF -.trace.-> META
+    FS -->|"pipeline Python — copie + pseudonymise"| LK
+    SV -.->|"lignes écartées"| CLN
+    GD -->|"SELECT · RBAC ClickHouse"| MB
+    META -.- CH

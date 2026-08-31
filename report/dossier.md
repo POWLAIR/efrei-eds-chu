@@ -7,7 +7,7 @@ Sources | 6
 Jours ingérés | 3
 Séjours fiables | 14 864
 Patients | 6 000
-Contrôles verify | 7/7
+Contrôles verify | 8/8
 ```
 
 ## 1. Le besoin
@@ -40,7 +40,7 @@ Le même patient revient d'un jour à l'autre (retour quotidien du dossier) : 16
 ## 3. Architecture cible — schéma justifié
 
 ![Architecture médaillon de l'EDS](architecture.png)
-Chaîne : filestorage → lake → bronze → silver → gold → dashboards. Python pilote, ClickHouse transforme.
+Chaîne : filestorage → lake → bronze → silver → gold → dashboards, plus une étape *clean* (quarantaine). Python pilote, ClickHouse transforme.
 
 ### Patron « médaillon » et ELT
 
@@ -70,13 +70,14 @@ On charge d'abord le **brut** (lake + bronze), puis on enchaîne les transformat
 |---|---|---|
 | **Lake** | copie brute, telle quelle (patients / séjours pseudonymisés) | fichiers `data/lake/` |
 | **Bronze** | tables typées, peu transformées, 1 table par source | `bronze.*` |
-| **Silver** | nettoyé, dédupliqué, cohérent ; **ce qu'on écarte est tracé** | `silver.*` + `silver.rejects` |
+| **Clean** | journal de quarantaine des lignes écartées — artefact **opérationnel** d'audit, non analytique (alimenté pendant l'étape silver) | `clean.rejects` |
+| **Silver** | nettoyé, dédupliqué, cohérent, **relié** : `patients → sejours → diagnostics → pathologies` ; `monitoring` = flux autonome | `silver.*` |
 | **Gold** | indicateurs agrégés **par usage** (dims + fait = tables, KPI = vues) | `gold.*` |
 
 ### Flux
 
 - **Entrant** : `pipeline` (Python) lit le filestorage en lecture seule et recopie vers le lake.
-- **Interne** : Python envoie les fichiers `sql/` à ClickHouse, couche par couche.
+- **Interne** : Python envoie les fichiers `sql/` à ClickHouse, couche par couche (bronze, clean, silver, gold).
 - **Sortant** : Metabase lit `gold.*` via deux utilisateurs ClickHouse distincts (RBAC).
 - **Transverse** : `meta.runs` (chaque exécution) et `meta.ingested_files` (idempotence).
 
@@ -100,14 +101,13 @@ Avant toute écriture dans le lake, `pipeline/pseudonymize.py` applique :
 
 Le même hachage est appliqué à `patient_id` dans `sejours.csv` → le lien patient ↔ séjour est conservé. **Aucune donnée identifiante n'atteint le lake ni l'entrepôt.** Le sel vit dans `.env`, hors dépôt.
 
-### Contrôles qualité (couche silver)
+### Contrôles qualité (silver) & journal de quarantaine (clean)
 
-Principe imposé par le sujet : le traitement attendu est **simple** — on **écarte** les lignes fautives (et on déduplique les patients), **on trace** ce qu'on écarte dans `silver.rejects (source, natural_key, rule, detail)`. Résultats sur le jeu fourni :
+Principe imposé par le sujet : le traitement attendu est **simple** — on **écarte** les lignes fautives (et on déduplique les patients), **on trace** ce qu'on écarte dans `clean.rejects (source, natural_key, rule, detail)`. Ce journal constitue une **étape *clean* distincte** de la base analytique silver : c'est un artefact opérationnel d'audit, pas une table d'analyse. Résultats sur le jeu fourni :
 
 | Source | Règle | Lignes écartées |
 |---|---|---|
 | monitoring | valeur hors plage physiologique (FC 20-250, SpO2 50-100, temp 30-45) | 1 369 |
-| monitoring | `stay_id` orphelin (aucun séjour valide correspondant) | 509 |
 | diagnostics | diagnostic rattaché à un séjour inconnu / écarté | 340 |
 | sejours | `discharge_ts < admission_ts` (incohérence temporelle) | 136 |
 | patients | sexe non normalisable · `birth_year` aberrant · durée > 180 j · service hors référentiel | 0 (aucun cas sur ce jeu) |
@@ -115,16 +115,26 @@ Principe imposé par le sujet : le traitement attendu est **simple** — on **é
 Bilan : **15 000** séjours bruts → **14 864** séjours fiables (99,1 %). **16 200** lignes patients → **6 000** patients (déduplication). Le fait `gold.fact_sejour` compte exactement 14 864 lignes (cf. contrôle de réconciliation, § 7).
 
 
-## 5. Couche silver — analyse & décisions de nettoyage
+## 5. Couche silver — modèle propre & décisions de nettoyage
 
 Cette section explicite **pourquoi** chaque règle, et pourquoi « écarter » plutôt que « corriger ».
 
 ![Schéma de la base silver](silver.png)
-Base `silver` : 4 tables nettoyées (`patients`, `sejours`, `monitoring`, `diagnostics`) + `rejects` (journal d'audit des lignes écartées). Les notes indiquent les bornes et l'intégrité référentielle appliquées.
+Base `silver` : une chaîne reliée **`patients → sejours → diagnostics → pathologies`**, plus le flux **`monitoring` autonome** (5 tables). Le journal des lignes écartées est **sorti de silver** — étape *clean* (§ 4). Les notes indiquent les bornes et l'intégrité référentielle appliquées.
 
 ### Un rôle unique par couche
 
-Silver **ne fait que** nettoyer / dédupliquer / tracer : pas de typage (rôle du bronze), pas d'agrégation (rôle du gold). Cette séparation stricte rend le pipeline lisible et maintenable — on sait exactement où intervenir pour chaque type de problème.
+Silver **ne fait que** nettoyer / dédupliquer / **relier** : pas de typage (rôle du bronze), pas d'agrégation (rôle du gold). La traçabilité des lignes écartées est déportée dans l'étape *clean* (`clean.rejects`) — un journal opérationnel qui n'a pas sa place dans le modèle analytique. Cette séparation stricte rend le pipeline lisible et maintenable — on sait exactement où intervenir pour chaque type de problème.
+
+### Pourquoi cette chaîne — le grain suit la source
+
+Le besoin métier est **centré patient** (prévalence par pathologie, cohortes), mais la donnée, elle, est produite au **grain du séjour** : `diagnostics.json` code chaque diagnostic sous un `stay_id`, jamais sous un `patient_id` (conforme au codage PMSI — le diagnostic appartient au résumé de séjour). On relie donc `diagnostics` à `sejours`, et non à `patients`, pour trois raisons :
+
+- **Fidélité au grain** : un patient a plusieurs séjours, chacun avec son propre diagnostic principal (infarctus lors d'un séjour, BPCO six mois plus tard). Rattacher au patient obligerait à choisir arbitrairement « quel principal gagne » — on inventerait un grain absent de la source. Le `type = 'principal'` n'a de sens qu'**au séjour**.
+- **Le besoin patient est déjà servi par jointure** : le `patient_hash` s'obtient via `diagnostics.stay_id → sejours.stay_id → sejours.patient_hash`. C'est ce chemin que matérialise `gold.fact_sejour` (qui porte à la fois `patient_hash` et `diag_principal`) et qu'exploite `kpi_recherche_prevalence` (`uniqExact(patient_hash)` par code). Une clé étrangère directe `diagnostics → patients` serait **redondante**.
+- **Bénéfices de bord** : rattaché au séjour, un diagnostic hérite du filtre qualité (`INNER JOIN silver.sejours` → un diagnostic sur un séjour écarté est exclu) et de l'**ancrage temporel** (cohortes par période, lien avec la réadmission) — le patient n'a pas de date, le séjour a `admission_ts`.
+
+Même logique pour `monitoring` : son grain est le relevé horodaté, indépendant du séjour → flux autonome (voir plus bas). Une vue « patient × pathologies » reste possible : c'est un *rollup* gold (diagnostics → séjours → patient), pas une relation de base.
 
 ### Déduplication des patients — garder la version la plus récente
 
@@ -145,13 +155,17 @@ Explicitement « pas une anomalie » (patient encore hospitalisé). **Conséquen
 
 Décision : dès qu'**une** constante renseignée est hors borne, on écarte **toute la ligne** (et non la seule valeur). Une valeur physiologiquement impossible signale une ligne corrompue (capteur, parsing) — on ne fait plus confiance aux autres colonnes de cette ligne. Un `NULL` est toléré (constante non mesurée à cet instant ≠ erreur).
 
-### Monitoring — `stay_id` orphelin (509 lignes)
+### Monitoring — flux autonome (pas de contrainte de séjour)
 
-Un relevé rattaché à un `stay_id` absent de `silver.sejours` (séjour lui-même écarté, ou identifiant erroné) est retiré : le conserver fausserait le KPI « relevés en alerte par jour ».
+Le monitoring est un **flux de faits volumineux** (constantes au chevet) traité **indépendamment** de `silver.sejours` : la table n'est reliée à rien. Un relevé dont le `stay_id` est absent de `silver.sejours` (séjour écarté, ou identifiant erroné) est **conservé** — c'est de la télémétrie réelle, et aucun KPI ne joint monitoring aux séjours (`kpi_pilotage_alertes_constantes` agrège par jour). Le refuser reviendrait à jeter des mesures physiologiques valides. Le taux d'orphelins est en revanche un **signal de qualité à remonter au CHU** (§ 11). Seules les bornes physiologiques restent appliquées.
 
 ### Diagnostics — jointure stricte (340 rejets)
 
-On ne garde que les diagnostics rattachés à un séjour silver **valide** et à un `code_cim10` **présent au référentiel**. Un diagnostic orphelin gonflerait artificiellement la prévalence d'une pathologie.
+On ne garde que les diagnostics rattachés à un séjour silver **valide** et à un `code_cim10` **présent au référentiel**. Un diagnostic orphelin gonflerait artificiellement la prévalence d'une pathologie. Les codes conservés ici alimentent `silver.pathologies`.
+
+### Diagnostics → pathologies — le référentiel matérialisé dans le silver
+
+`silver.pathologies` **découle des diagnostics** : ce sont les codes CIM-10 **réellement observés** dans `silver.diagnostics`, avec leur libellé canonique repris du référentiel bronze (source de vérité pour la *validation* des codes). La chaîne `diagnostics → pathologies` devient une vraie relation dans le modèle, `gold.dim_cim10` en découle, et un contrôle `verify` (`08`) garantit que tout code de `silver.diagnostics` est présent dans `silver.pathologies`, elle-même incluse dans le référentiel.
 
 ### Normalisation du sexe — sans perdre le patient
 
@@ -163,7 +177,7 @@ On ne garde que les diagnostics rattachés à un séjour silver **valide** et à
 
 ### Rebuild complet à chaque `transform`
 
-Chaque couche fait `TRUNCATE` + `INSERT` depuis la couche amont. **Choix idempotence > performance**, assumé à l'échelle laptop : `make transform` est rejouable sans doublon. En production sur un vrai volume, on passerait à un traitement **incrémental par partition de date**.
+Chaque couche fait `TRUNCATE` + `INSERT` depuis la couche amont — y compris `clean.rejects`, reconstruit à chaque run. **Choix idempotence > performance**, assumé à l'échelle laptop : `make transform` est rejouable sans doublon. En production sur un vrai volume, on passerait à un traitement **incrémental par partition de date** et à un journal `clean.rejects` **historisé** (avec `run_id`).
 
 
 ## 6. Modélisation — schéma en étoile
@@ -171,7 +185,7 @@ Chaque couche fait `TRUNCATE` + `INSERT` depuis la couche amont. **Choix idempot
 ![Schéma en étoile de la couche gold](etoile.png)
 
 - **Fait** : `fact_sejour` — 1 ligne = 1 séjour valide. Mesures : `los_days`, `is_closed`, `is_urgence`, comptages.
-- **Dimensions** : `dim_patient` (sexe, région, tranche d'âge), `dim_service` (code → libellé), `dim_cim10` (code → libellé). La date d'admission est une **dimension dégénérée** portée par le fait.
+- **Dimensions** : `dim_patient` (sexe, région, tranche d'âge), `dim_service` (code → libellé), `dim_cim10` (code → libellé, **alimentée par `silver.pathologies`**). La date d'admission est une **dimension dégénérée** portée par le fait.
 - **Règle appliquée** : dans « KPI par X », X est une dimension et le KPI (compte / somme) sort du fait. On ne crée jamais de « fact_patient » — le patient n'est pas un événement.
 
 ## 7. Indicateurs — définitions et chiffres justifiés
@@ -198,7 +212,7 @@ Table de fait : `gold.fact_sejour`. Chaque chiffre est **reproductible** (`make 
 
 ### Justification des chiffres
 
-`make verify` exécute 7 contrôles de réconciliation qui **garantissent** ces valeurs :
+`make verify` exécute 8 contrôles de réconciliation qui **garantissent** ces valeurs :
 
 - `count(gold.fact_sejour)` = `count(silver.sejours)` = 14 864 ;
 - tout `stay_id` de silver provient du bronze et n'a pas été écarté par ailleurs ;
@@ -206,7 +220,8 @@ Table de fait : `gold.fact_sejour`. Chaque chiffre est **reproductible** (`make 
 - aucune cohorte recherche < 5 ;
 - aucun `los_hours` négatif, aucune incohérence temporelle résiduelle ;
 - `Σ passages_urgence (KPI)` = `countIf(is_urgence)` sur le fait ;
-- aucune constante hors plage résiduelle en silver.
+- aucune constante hors plage résiduelle en silver ;
+- tout `code_cim10` de `silver.diagnostics` est présent dans `silver.pathologies`, elle-même incluse dans le référentiel CIM-10.
 
 
 ## 8. Visualisations
@@ -225,11 +240,11 @@ Deux dashboards Metabase provisionnés **automatiquement** et de façon idempote
 
 Le cloisonnement est porté à **deux niveaux**, le second étant la vraie garantie :
 
-1. **Metabase** — permissions de données et de collections par groupe. Un membre du groupe *Recherche* ne voit ni la base *EDS — Pilotage*, ni la collection / le dashboard *Pilotage*.
+**Niveau 1 — Metabase.** Permissions de données et de collections par groupe. Un membre du groupe *Recherche* ne voit ni la base *EDS — Pilotage*, ni la collection / le dashboard *Pilotage*.
 
 ![Vue d'un utilisateur Recherche](../dashboards/captures/01-cloisonnement-recherche.png)
 
-2. **ClickHouse RBAC** — `ro_recherche` n'a de `GRANT SELECT` que sur `gold.kpi_recherche_*`. Même en SQL libre via Metabase, une requête sur une vue de pilotage échoue.
+**Niveau 2 — ClickHouse RBAC** (la vraie garantie). `ro_recherche` n'a de `GRANT SELECT` que sur `gold.kpi_recherche_*`. Même en SQL libre via Metabase, une requête sur une vue de pilotage échoue.
 
 ![Requête pilotage refusée pour ro_recherche](../dashboards/captures/02-rbac-clickhouse-denied.png)
 
@@ -238,12 +253,14 @@ Le cloisonnement est porté à **deux niveaux**, le second étant la vraie garan
 
 | Contrainte | Mise en œuvre |
 |---|---|
-| Pseudonymisation | hachage salé déterministe **à l'entrée du lake** (§ 4) ; identité en clair jamais écrite |
+| Pseudonymisation | hachage salé déterministe **à l'entrée du lake** (§ 4) ; le *pipeline* n'écrit jamais d'identité réelle dans le lake ni l'entrepôt |
 | Minimisation | `nir/nom/prenom` supprimés ; `birth_date` → année ; âge en tranches |
 | Cloisonnement | 2 utilisateurs ClickHouse (`ro_pilotage`, `ro_recherche`) + rôles ; 2 connexions et 2 groupes Metabase (§ 8) |
 | Petits effectifs | `HAVING … ≥ 5` **dans les vues** `gold.kpi_recherche_*` ; contrôle `verify` associé |
-| Traçabilité | `meta.runs` (qui, quand, quel statut) + `meta.ingested_files` (hash de chaque fichier) + logs horodatés |
+| Traçabilité | `meta.runs` (qui, quand, quel statut) + `meta.ingested_files` (hash de chaque fichier) + logs horodatés ; `clean.rejects` journalise chaque ligne écartée (source, règle, clé) |
 | Sécurité du sel | `PSEUDO_SALT` dans `.env` (jamais committé) ; sa perte casse les jointures historiques → sauvegarde hors dépôt |
+
+> Le jeu de données utilisé ici est **synthétique** (fourni avec le sujet : noms et NIR fabriqués). En conditions réelles, le dépôt `source-filestorage` — qui contient l'identité en clair le temps du hachage — resterait **hors du dépôt Git** et hors périmètre de l'entrepôt.
 
 ## 10. Automatisation (Partie 2)
 
@@ -252,7 +269,7 @@ Le cloisonnement est porté à **deux niveaux**, le second étant la vraie garan
 - **Planification** : `crontab scripts/crontab.example` — tous les jours à 02h15 ; sur échec, une ligne `[ALERTE]` est écrite dans `logs/cron.log` et le run est marqué `error`.
 - **Journalisation** : `logs/pipeline-AAAAMMJJ.log` (console + fichier).
 - **Reprise sur incident** : `make status` pour identifier le run en échec, corriger la cause, puis `make replay DATE=<jour>` (ré-ingère + rejoue les transformations).
-- **Contrôle de fiabilité** : `make verify` — 7 contrôles, exit ≠ 0 si l'un casse ; branché sur `run-daily` et documenté dans `.claude/skills/eds-run/SKILL.md`.
+- **Contrôle de fiabilité** : `make verify` — 8 contrôles, exit ≠ 0 si l'un casse ; branché sur `run-daily` et documenté dans `.claude/skills/eds-run/SKILL.md`.
 
 ## 11. Limites & recommandations
 
@@ -266,10 +283,12 @@ Le cloisonnement est porté à **deux niveaux**, le second étant la vraie garan
 
 ### Passage à l'échelle du monitoring
 
-Le flux monitoring est le plus volumineux et grossira. Recommandations : cluster ClickHouse (sharding par `stay_id`), politique de **rétention** (TTL sur les partitions anciennes), **agrégats pré-calculés** (Materialized Views pour les alertes par jour) plutôt qu'un scan complet à chaque lecture.
+Le flux monitoring est le plus volumineux et grossira. Le traiter comme un **flux autonome** (aucune jointure inter-tables à honorer au nettoyage) facilite ce passage à l'échelle. Recommandations : cluster ClickHouse (sharding par `stay_id`), politique de **rétention** (TTL sur les partitions anciennes), **agrégats pré-calculés** (Materialized Views pour les alertes par jour) plutôt qu'un scan complet à chaque lecture.
 
 ### Qualité & sécurité
 
 - Étendre les contrôles silver (doublons de `stay_id` divergents entre dépôts, valeurs de `admission_mode` / `discharge_mode` hors nomenclature).
+- `silver.monitoring` (flux autonome) contient des relevés dont le `stay_id` n'existe dans aucun séjour : **conservés** (télémétrie réelle), mais leur taux est à **remonter au CHU** comme anomalie de rattachement à la source — même logique que le `discharge_mode` non renseigné.
+- Le référentiel `services` n'est pas (encore) matérialisé en silver comme `pathologies` : le retour portait sur la chaîne des diagnostics. Le promouvoir en `silver.services` rendrait la chaîne pleinement symétrique.
 - Chiffrement au repos des volumes, journalisation des accès Metabase, rotation du sel de pseudonymisation avec table de correspondance sécurisée.
 - Le champ `discharge_mode` est non renseigné sur ~14 % des séjours clos : à remonter au CHU comme problème **à la source**.
