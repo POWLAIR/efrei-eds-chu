@@ -219,6 +219,17 @@ def scaled_image(src: str) -> Image | None:
     return img
 
 
+def _section_has_image(tokens, start: int, level: str) -> bool:
+    """Une image apparaît-elle dans la section (jusqu'au prochain titre de niveau <= `level`) ?"""
+    for j in range(start, len(tokens)):
+        t = tokens[j]
+        if t.type == "heading_open" and t.tag <= level:  # h2 <= h2, h2 <= h3 est faux
+            return False
+        if t.type == "inline" and any(c.type == "image" for c in t.children or []):
+            return True
+    return False
+
+
 # --- Parcours des tokens ---------------------------------------------------
 def build_story(md_text: str) -> list:
     md = MarkdownIt("commonmark").enable("table").enable("strikethrough")
@@ -270,7 +281,15 @@ def build_story(md_text: str) -> list:
                 if imgs or txt:
                     i += 3
 
-            reserve = 70 * mm if len(block) > 1 and isinstance(block[1], Image) else 40 * mm
+            # Réserve : si la section (jusqu'au prochain titre) contient une figure,
+            # on garde de la place pour titre + intro + figure -> la section entière
+            # bascule à la page suivante plutôt que de laisser le titre seul.
+            if len(block) > 1 and isinstance(block[1], Image):
+                reserve = 78 * mm
+            elif _section_has_image(tokens, i, lvl):
+                reserve = 185 * mm
+            else:
+                reserve = 40 * mm
             story.append(CondPageBreak(reserve))
             story.append(KeepTogether(block) if len(block) > 1 else heading)
             continue
