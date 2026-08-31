@@ -36,7 +36,6 @@ Le CHU dépose chaque jour ses fichiers dans `source-filestorage/<source>/<AAAA-
 
 Le même patient revient d'un jour à l'autre (retour quotidien du dossier) : 16 200 lignes `patients` brutes correspondent à **6 000 patients distincts**.
 
----
 
 ## 3. Architecture cible — schéma justifié
 
@@ -206,7 +205,6 @@ Table de fait : `gold.fact_sejour`. Chaque chiffre est **reproductible** (`make 
 - `Σ passages_urgence (KPI)` = `countIf(is_urgence)` sur le fait ;
 - aucune constante hors plage résiduelle en silver.
 
----
 
 ## 8. Visualisations
 

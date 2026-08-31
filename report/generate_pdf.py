@@ -20,7 +20,9 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import (
+    CondPageBreak,
     Image,
+    KeepTogether,
     ListFlowable,
     ListItem,
     PageBreak,
@@ -207,7 +209,7 @@ def scaled_image(src: str) -> Image | None:
     img = Image(str(p))
     ratio = img.imageHeight / img.imageWidth
     max_w = CONTENT_W
-    max_h = 220 * mm
+    max_h = 168 * mm  # laisse la place à un titre + une légende sur la même page
     w = min(max_w, img.imageWidth)
     h = w * ratio
     if h > max_h:
@@ -249,8 +251,28 @@ def build_story(md_text: str) -> list:
                 story.insert(1, Spacer(1, 16))
                 continue
             style = {"h1": "h1", "h2": "h2", "h3": "h3"}.get(lvl, "h3")
-            story.append(Paragraph(content, ST[style]))
+            heading = Paragraph(content, ST[style])
             i += 3
+
+            # Le bloc qui suit (paragraphe ou image) reste solidaire du titre :
+            # jamais de titre seul en bas de page.
+            block: list = [heading]
+            if i < len(tokens) and tokens[i].type == "paragraph_open":
+                imgs, txt = split_images(tokens[i + 1])
+                for src, alt in imgs:
+                    flow = scaled_image(src)
+                    if flow:
+                        block.append(flow)
+                        if alt:
+                            block.append(Paragraph(html.escape(alt), ST["caption"]))
+                if txt:
+                    block.append(Paragraph(txt, ST["caption"] if imgs else ST["body"]))
+                if imgs or txt:
+                    i += 3
+
+            reserve = 70 * mm if len(block) > 1 and isinstance(block[1], Image) else 40 * mm
+            story.append(CondPageBreak(reserve))
+            story.append(KeepTogether(block) if len(block) > 1 else heading)
             continue
 
         if tt == "paragraph_open":
