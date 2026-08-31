@@ -1,0 +1,755 @@
+{
+  "description": null,
+  "archived": false,
+  "view_count": 2,
+  "collection_position": null,
+  "dashcards": [
+    {
+      "size_x": 12,
+      "dashboard_tab_id": null,
+      "series": [],
+      "inline_parameters": [],
+      "action_id": null,
+      "collection_authority_level": null,
+      "card": {
+        "cache_invalidated_at": null,
+        "description": null,
+        "archived": false,
+        "view_count": 0,
+        "collection_position": null,
+        "source_card_id": null,
+        "table_id": null,
+        "result_metadata": [
+          {
+            "name": "service_label",
+            "database_type": "String",
+            "base_type": "type/Text",
+            "display_name": "service_label",
+            "field_ref": [
+              "field",
+              "service_label",
+              {
+                "base-type": "type/Text"
+              }
+            ]
+          },
+          {
+            "name": "dms_jours",
+            "database_type": "Nullable(Float64)",
+            "base_type": "type/Float",
+            "display_name": "dms_jours",
+            "field_ref": [
+              "field",
+              "dms_jours",
+              {
+                "base-type": "type/Float"
+              }
+            ]
+          }
+        ],
+        "embedding_type": null,
+        "initially_published_at": null,
+        "can_write": true,
+        "card_schema": 23,
+        "database_id": 2,
+        "enable_embedding": false,
+        "collection_id": 6,
+        "query_type": "native",
+        "download_perms": "full",
+        "name": "DMS par service (jours)",
+        "public_uuid_prefix": null,
+        "document_id": null,
+        "last_used_at": "2026-08-31T11:21:37.11709Z",
+        "type": "question",
+        "dimensions": null,
+        "query_average_duration": null,
+        "creator_id": 1,
+        "moderation_reviews": [],
+        "updated_at": "2026-08-31T11:21:37.11709Z",
+        "made_public_by_id": null,
+        "embedding_params": null,
+        "cache_ttl": null,
+        "dataset_query": {
+          "stages": [
+            {
+              "lib/type": "mbql.stage/native",
+              "native": "SELECT service_label, dms_jours FROM gold.kpi_pilotage_dms ORDER BY dms_jours DESC"
+            }
+          ],
+          "lib/type": "mbql/query",
+          "database": 2
+        },
+        "dimension_mappings": null,
+        "id": 40,
+        "legacy_query": null,
+        "parameter_mappings": [],
+        "display": "bar",
+        "archived_directly": false,
+        "entity_id": "gSdR3DlHTQ0V59Dgp2Tmy",
+        "collection_preview": true,
+        "visualization_settings": {
+          "graph.dimensions": [
+            "service_label"
+          ],
+          "graph.metrics": [
+            "dms_jours"
+          ]
+        },
+        "metabase_version": "v0.63.15.5 (a1b5b62)",
+        "parameters": [],
+        "dashboard_id": null,
+        "created_at": "2026-08-31T11:21:37.11709Z",
+        "public_uuid": null
+      },
+      "updated_at": "2026-08-31T11:21:48.44555Z",
+      "col": 0,
+      "id": 37,
+      "parameter_mappings": [],
+      "card_id": 40,
+      "entity_id": "Fl306kKHPqhjCrE4mY47W",
+      "visualization_settings": {},
+      "size_y": 8,
+      "dashboard_id": 2,
+      "created_at": "2026-08-31T11:21:48.44555Z",
+      "row": 0
+    },
+    {
+      "size_x": 12,
+      "dashboard_tab_id": null,
+      "series": [],
+      "inline_parameters": [],
+      "action_id": null,
+      "collection_authority_level": null,
+      "card": {
+        "cache_invalidated_at": null,
+        "description": null,
+        "archived": false,
+        "view_count": 0,
+        "collection_position": null,
+        "source_card_id": null,
+        "table_id": null,
+        "result_metadata": [
+          {
+            "name": "jour",
+            "database_type": "Date",
+            "base_type": "type/Date",
+            "display_name": "jour",
+            "field_ref": [
+              "field",
+              "jour",
+              {
+                "base-type": "type/Date"
+              }
+            ]
+          },
+          {
+            "name": "passages_urgence",
+            "database_type": "UInt64",
+            "base_type": "type/BigInteger",
+            "display_name": "passages_urgence",
+            "field_ref": [
+              "field",
+              "passages_urgence",
+              {
+                "base-type": "type/BigInteger"
+              }
+            ]
+          },
+          {
+            "name": "admissions_totales",
+            "database_type": "UInt64",
+            "base_type": "type/BigInteger",
+            "display_name": "admissions_totales",
+            "field_ref": [
+              "field",
+              "admissions_totales",
+              {
+                "base-type": "type/BigInteger"
+              }
+            ]
+          }
+        ],
+        "embedding_type": null,
+        "initially_published_at": null,
+        "can_write": true,
+        "card_schema": 23,
+        "database_id": 2,
+        "enable_embedding": false,
+        "collection_id": 6,
+        "query_type": "native",
+        "download_perms": "full",
+        "name": "Passages aux urgences par jour",
+        "public_uuid_prefix": null,
+        "document_id": null,
+        "last_used_at": "2026-08-31T11:21:38.84408Z",
+        "type": "question",
+        "dimensions": null,
+        "query_average_duration": null,
+        "creator_id": 1,
+        "moderation_reviews": [],
+        "updated_at": "2026-08-31T11:21:38.84408Z",
+        "made_public_by_id": null,
+        "embedding_params": null,
+        "cache_ttl": null,
+        "dataset_query": {
+          "stages": [
+            {
+              "lib/type": "mbql.stage/native",
+              "native": "SELECT jour, passages_urgence, admissions_totales FROM gold.kpi_pilotage_urgences_jour ORDER BY jour"
+            }
+          ],
+          "lib/type": "mbql/query",
+          "database": 2
+        },
+        "dimension_mappings": null,
+        "id": 41,
+        "legacy_query": null,
+        "parameter_mappings": [],
+        "display": "line",
+        "archived_directly": false,
+        "entity_id": "Rxy7DxvY8trf_YEwwn_HT",
+        "collection_preview": true,
+        "visualization_settings": {
+          "graph.dimensions": [
+            "jour"
+          ],
+          "graph.metrics": [
+            "passages_urgence",
+            "admissions_totales"
+          ]
+        },
+        "metabase_version": "v0.63.15.5 (a1b5b62)",
+        "parameters": [],
+        "dashboard_id": null,
+        "created_at": "2026-08-31T11:21:38.84408Z",
+        "public_uuid": null
+      },
+      "updated_at": "2026-08-31T11:21:48.44555Z",
+      "col": 12,
+      "id": 38,
+      "parameter_mappings": [],
+      "card_id": 41,
+      "entity_id": "vHLQBjWMIynejNvEZ_wqN",
+      "visualization_settings": {},
+      "size_y": 8,
+      "dashboard_id": 2,
+      "created_at": "2026-08-31T11:21:48.44555Z",
+      "row": 0
+    },
+    {
+      "size_x": 12,
+      "dashboard_tab_id": null,
+      "series": [],
+      "inline_parameters": [],
+      "action_id": null,
+      "collection_authority_level": null,
+      "card": {
+        "cache_invalidated_at": null,
+        "description": null,
+        "archived": false,
+        "view_count": 0,
+        "collection_position": null,
+        "source_card_id": null,
+        "table_id": null,
+        "result_metadata": [
+          {
+            "name": "taux_pct",
+            "database_type": "Float64",
+            "base_type": "type/Float",
+            "display_name": "taux_pct",
+            "field_ref": [
+              "field",
+              "taux_pct",
+              {
+                "base-type": "type/Float"
+              }
+            ]
+          }
+        ],
+        "embedding_type": null,
+        "initially_published_at": null,
+        "can_write": true,
+        "card_schema": 23,
+        "database_id": 2,
+        "enable_embedding": false,
+        "collection_id": 6,
+        "query_type": "native",
+        "download_perms": "full",
+        "name": "Taux de réadmission à 30 jours (%)",
+        "public_uuid_prefix": null,
+        "document_id": null,
+        "last_used_at": "2026-08-31T11:21:40.1492Z",
+        "type": "question",
+        "dimensions": null,
+        "query_average_duration": null,
+        "creator_id": 1,
+        "moderation_reviews": [],
+        "updated_at": "2026-08-31T11:21:40.1492Z",
+        "made_public_by_id": null,
+        "embedding_params": null,
+        "cache_ttl": null,
+        "dataset_query": {
+          "stages": [
+            {
+              "lib/type": "mbql.stage/native",
+              "native": "SELECT taux_pct FROM gold.kpi_pilotage_readmission_30j"
+            }
+          ],
+          "lib/type": "mbql/query",
+          "database": 2
+        },
+        "dimension_mappings": null,
+        "id": 42,
+        "legacy_query": null,
+        "parameter_mappings": [],
+        "display": "scalar",
+        "archived_directly": false,
+        "entity_id": "yZnGT_WqAz1cn2OQ9hE1a",
+        "collection_preview": true,
+        "visualization_settings": {},
+        "metabase_version": "v0.63.15.5 (a1b5b62)",
+        "parameters": [],
+        "dashboard_id": null,
+        "created_at": "2026-08-31T11:21:40.1492Z",
+        "public_uuid": null
+      },
+      "updated_at": "2026-08-31T11:21:48.44555Z",
+      "col": 0,
+      "id": 39,
+      "parameter_mappings": [],
+      "card_id": 42,
+      "entity_id": "cNu5ZFqznlvkjfuE794r-",
+      "visualization_settings": {},
+      "size_y": 8,
+      "dashboard_id": 2,
+      "created_at": "2026-08-31T11:21:48.44555Z",
+      "row": 8
+    },
+    {
+      "size_x": 12,
+      "dashboard_tab_id": null,
+      "series": [],
+      "inline_parameters": [],
+      "action_id": null,
+      "collection_authority_level": null,
+      "card": {
+        "cache_invalidated_at": null,
+        "description": null,
+        "archived": false,
+        "view_count": 0,
+        "collection_position": null,
+        "source_card_id": null,
+        "table_id": null,
+        "result_metadata": [
+          {
+            "name": "jour",
+            "database_type": "Date",
+            "base_type": "type/Date",
+            "display_name": "jour",
+            "field_ref": [
+              "field",
+              "jour",
+              {
+                "base-type": "type/Date"
+              }
+            ]
+          },
+          {
+            "name": "alertes_fc",
+            "database_type": "UInt64",
+            "base_type": "type/BigInteger",
+            "display_name": "alertes_fc",
+            "field_ref": [
+              "field",
+              "alertes_fc",
+              {
+                "base-type": "type/BigInteger"
+              }
+            ]
+          },
+          {
+            "name": "alertes_spo2",
+            "database_type": "UInt64",
+            "base_type": "type/BigInteger",
+            "display_name": "alertes_spo2",
+            "field_ref": [
+              "field",
+              "alertes_spo2",
+              {
+                "base-type": "type/BigInteger"
+              }
+            ]
+          },
+          {
+            "name": "alertes_temp",
+            "database_type": "UInt64",
+            "base_type": "type/BigInteger",
+            "display_name": "alertes_temp",
+            "field_ref": [
+              "field",
+              "alertes_temp",
+              {
+                "base-type": "type/BigInteger"
+              }
+            ]
+          }
+        ],
+        "embedding_type": null,
+        "initially_published_at": null,
+        "can_write": true,
+        "card_schema": 23,
+        "database_id": 2,
+        "enable_embedding": false,
+        "collection_id": 6,
+        "query_type": "native",
+        "download_perms": "full",
+        "name": "Relevés de constantes en alerte par jour",
+        "public_uuid_prefix": null,
+        "document_id": null,
+        "last_used_at": "2026-08-31T11:21:41.260906Z",
+        "type": "question",
+        "dimensions": null,
+        "query_average_duration": null,
+        "creator_id": 1,
+        "moderation_reviews": [],
+        "updated_at": "2026-08-31T11:21:41.260906Z",
+        "made_public_by_id": null,
+        "embedding_params": null,
+        "cache_ttl": null,
+        "dataset_query": {
+          "stages": [
+            {
+              "lib/type": "mbql.stage/native",
+              "native": "SELECT jour, alertes_fc, alertes_spo2, alertes_temp FROM gold.kpi_pilotage_alertes_constantes ORDER BY jour"
+            }
+          ],
+          "lib/type": "mbql/query",
+          "database": 2
+        },
+        "dimension_mappings": null,
+        "id": 43,
+        "legacy_query": null,
+        "parameter_mappings": [],
+        "display": "bar",
+        "archived_directly": false,
+        "entity_id": "0OSnaACf9qquMzjQ9vB7G",
+        "collection_preview": true,
+        "visualization_settings": {
+          "graph.dimensions": [
+            "jour"
+          ],
+          "stackable.stack_type": "stacked",
+          "graph.metrics": [
+            "alertes_fc",
+            "alertes_spo2",
+            "alertes_temp"
+          ]
+        },
+        "metabase_version": "v0.63.15.5 (a1b5b62)",
+        "parameters": [],
+        "dashboard_id": null,
+        "created_at": "2026-08-31T11:21:41.260906Z",
+        "public_uuid": null
+      },
+      "updated_at": "2026-08-31T11:21:48.44555Z",
+      "col": 12,
+      "id": 40,
+      "parameter_mappings": [],
+      "card_id": 43,
+      "entity_id": "xLBGz4DaSzR1o5aUKtXp5",
+      "visualization_settings": {},
+      "size_y": 8,
+      "dashboard_id": 2,
+      "created_at": "2026-08-31T11:21:48.44555Z",
+      "row": 8
+    },
+    {
+      "size_x": 12,
+      "dashboard_tab_id": null,
+      "series": [],
+      "inline_parameters": [],
+      "action_id": null,
+      "collection_authority_level": null,
+      "card": {
+        "cache_invalidated_at": null,
+        "description": null,
+        "archived": false,
+        "view_count": 0,
+        "collection_position": null,
+        "source_card_id": null,
+        "table_id": null,
+        "result_metadata": [
+          {
+            "name": "service_label",
+            "database_type": "String",
+            "base_type": "type/Text",
+            "display_name": "service_label",
+            "field_ref": [
+              "field",
+              "service_label",
+              {
+                "base-type": "type/Text"
+              }
+            ]
+          },
+          {
+            "name": "admissions",
+            "database_type": "UInt64",
+            "base_type": "type/BigInteger",
+            "display_name": "admissions",
+            "field_ref": [
+              "field",
+              "admissions",
+              {
+                "base-type": "type/BigInteger"
+              }
+            ]
+          },
+          {
+            "name": "patients_jours",
+            "database_type": "Nullable(Float64)",
+            "base_type": "type/Float",
+            "display_name": "patients_jours",
+            "field_ref": [
+              "field",
+              "patients_jours",
+              {
+                "base-type": "type/Float"
+              }
+            ]
+          }
+        ],
+        "embedding_type": null,
+        "initially_published_at": null,
+        "can_write": true,
+        "card_schema": 23,
+        "database_id": 2,
+        "enable_embedding": false,
+        "collection_id": 6,
+        "query_type": "native",
+        "download_perms": "full",
+        "name": "Charge par service (patients-jours)",
+        "public_uuid_prefix": null,
+        "document_id": null,
+        "last_used_at": "2026-08-31T11:21:42.789447Z",
+        "type": "question",
+        "dimensions": null,
+        "query_average_duration": null,
+        "creator_id": 1,
+        "moderation_reviews": [],
+        "updated_at": "2026-08-31T11:21:42.789447Z",
+        "made_public_by_id": null,
+        "embedding_params": null,
+        "cache_ttl": null,
+        "dataset_query": {
+          "stages": [
+            {
+              "lib/type": "mbql.stage/native",
+              "native": "SELECT service_label, admissions, patients_jours FROM gold.kpi_pilotage_charge_service ORDER BY patients_jours DESC"
+            }
+          ],
+          "lib/type": "mbql/query",
+          "database": 2
+        },
+        "dimension_mappings": null,
+        "id": 44,
+        "legacy_query": null,
+        "parameter_mappings": [],
+        "display": "bar",
+        "archived_directly": false,
+        "entity_id": "B93XYUnB8WauorBTi8lMQ",
+        "collection_preview": true,
+        "visualization_settings": {
+          "graph.dimensions": [
+            "service_label"
+          ],
+          "graph.metrics": [
+            "patients_jours"
+          ]
+        },
+        "metabase_version": "v0.63.15.5 (a1b5b62)",
+        "parameters": [],
+        "dashboard_id": null,
+        "created_at": "2026-08-31T11:21:42.789447Z",
+        "public_uuid": null
+      },
+      "updated_at": "2026-08-31T11:21:48.44555Z",
+      "col": 0,
+      "id": 41,
+      "parameter_mappings": [],
+      "card_id": 44,
+      "entity_id": "OYVU6bAwDH1i8zc0AH7WD",
+      "visualization_settings": {},
+      "size_y": 8,
+      "dashboard_id": 2,
+      "created_at": "2026-08-31T11:21:48.44555Z",
+      "row": 16
+    },
+    {
+      "size_x": 12,
+      "dashboard_tab_id": null,
+      "series": [],
+      "inline_parameters": [],
+      "action_id": null,
+      "collection_authority_level": null,
+      "card": {
+        "cache_invalidated_at": null,
+        "description": null,
+        "archived": false,
+        "view_count": 0,
+        "collection_position": null,
+        "source_card_id": null,
+        "table_id": null,
+        "result_metadata": [
+          {
+            "name": "mode_sortie",
+            "database_type": "LowCardinality(String)",
+            "base_type": "type/Text",
+            "display_name": "mode_sortie",
+            "field_ref": [
+              "field",
+              "mode_sortie",
+              {
+                "base-type": "type/Text"
+              }
+            ]
+          },
+          {
+            "name": "nb_sejours",
+            "database_type": "UInt64",
+            "base_type": "type/BigInteger",
+            "display_name": "nb_sejours",
+            "field_ref": [
+              "field",
+              "nb_sejours",
+              {
+                "base-type": "type/BigInteger"
+              }
+            ]
+          }
+        ],
+        "embedding_type": null,
+        "initially_published_at": null,
+        "can_write": true,
+        "card_schema": 23,
+        "database_id": 2,
+        "enable_embedding": false,
+        "collection_id": 6,
+        "query_type": "native",
+        "download_perms": "full",
+        "name": "Répartition des modes de sortie",
+        "public_uuid_prefix": null,
+        "document_id": null,
+        "last_used_at": "2026-08-31T11:21:43.881373Z",
+        "type": "question",
+        "dimensions": null,
+        "query_average_duration": null,
+        "creator_id": 1,
+        "moderation_reviews": [],
+        "updated_at": "2026-08-31T11:21:43.881373Z",
+        "made_public_by_id": null,
+        "embedding_params": null,
+        "cache_ttl": null,
+        "dataset_query": {
+          "stages": [
+            {
+              "lib/type": "mbql.stage/native",
+              "native": "SELECT mode_sortie, nb_sejours FROM gold.kpi_pilotage_mode_sortie ORDER BY nb_sejours DESC"
+            }
+          ],
+          "lib/type": "mbql/query",
+          "database": 2
+        },
+        "dimension_mappings": null,
+        "id": 45,
+        "legacy_query": null,
+        "parameter_mappings": [],
+        "display": "pie",
+        "archived_directly": false,
+        "entity_id": "yNEY9Z8A6k8N8swTPcJgJ",
+        "collection_preview": true,
+        "visualization_settings": {
+          "pie.dimension": "mode_sortie",
+          "pie.metric": "nb_sejours"
+        },
+        "metabase_version": "v0.63.15.5 (a1b5b62)",
+        "parameters": [],
+        "dashboard_id": null,
+        "created_at": "2026-08-31T11:21:43.881373Z",
+        "public_uuid": null
+      },
+      "updated_at": "2026-08-31T11:21:48.44555Z",
+      "col": 12,
+      "id": 42,
+      "parameter_mappings": [],
+      "card_id": 45,
+      "entity_id": "VWEY7pejq37WkgUm9-9ES",
+      "visualization_settings": {},
+      "size_y": 8,
+      "dashboard_id": 2,
+      "created_at": "2026-08-31T11:21:48.44555Z",
+      "row": 16
+    }
+  ],
+  "embedding_type": null,
+  "initially_published_at": null,
+  "can_write": true,
+  "can_set_cache_policy": true,
+  "tabs": [],
+  "enable_embedding": false,
+  "collection_id": 6,
+  "show_in_getting_started": false,
+  "name": "Pilotage hospitalier",
+  "is_remote_synced": false,
+  "width": "fixed",
+  "public_uuid_prefix": null,
+  "caveats": null,
+  "collection_authority_level": null,
+  "creator_id": 1,
+  "can_restore": false,
+  "moderation_reviews": [],
+  "updated_at": "2026-08-31T11:21:46.642687Z",
+  "made_public_by_id": null,
+  "embedding_params": null,
+  "cache_ttl": null,
+  "last_used_param_values": {},
+  "id": 2,
+  "last_viewed_at": "2026-08-31T11:21:46.642687Z",
+  "position": null,
+  "archived_directly": false,
+  "entity_id": "StKSbLSt5J2hvJjFVRYnq",
+  "param_fields": {},
+  "last-edit-info": {
+    "id": 1,
+    "email": "admin@chu.local",
+    "first_name": "Admin",
+    "last_name": "EDS",
+    "timestamp": "2026-08-31T11:21:48.810213Z"
+  },
+  "collection": {
+    "authority_level": null,
+    "description": null,
+    "archived": false,
+    "slug": "pilotage",
+    "archive_operation_id": null,
+    "name": "Pilotage",
+    "is_remote_synced": false,
+    "personal_owner_id": null,
+    "type": null,
+    "is_sample": false,
+    "effective_location": "/",
+    "id": 6,
+    "archived_directly": null,
+    "entity_id": "_CGq1ULNyxF4exkLmyPpp",
+    "location": "/",
+    "namespace": null,
+    "is_personal": false,
+    "created_at": "2026-08-31T11:21:34.061745Z"
+  },
+  "parameters": [],
+  "auto_apply_filters": true,
+  "created_at": "2026-08-31T11:21:46.642687Z",
+  "public_uuid": null,
+  "points_of_interest": null,
+  "can_delete": false
+}
