@@ -82,10 +82,13 @@ test: ## Tests unitaires (pseudonymisation, règles qualité)
 	uv run pytest -q
 
 ## --- Dossier de rendu -------------------------------------------------------
+MMDC = npx --yes @mermaid-js/mermaid-cli
+
 .PHONY: schema
 schema: ## Exporte les schémas mermaid en PNG (report/*.png)
-	npx --yes @mermaid-js/mermaid-cli -i report/architecture.mmd -o report/architecture.png -b transparent -w 1600
-	npx --yes @mermaid-js/mermaid-cli -i report/etoile.mmd       -o report/etoile.png       -b transparent -w 1400
+	$(MMDC) -i report/architecture.mmd -o report/architecture.png -b white -w 1600
+	$(MMDC) -i report/silver.mmd       -o report/silver.png       -b white -w 1500
+	$(MMDC) -i report/etoile.mmd       -o report/etoile.png       -b white -w 1400
 
 .PHONY: report
 report: schema ## Génère report/dossier.pdf depuis report/dossier.md (design corporate)

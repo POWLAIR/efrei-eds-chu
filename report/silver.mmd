@@ -1,0 +1,40 @@
+erDiagram
+    patients ||--o{ sejours : "patient_hash"
+    sejours  ||--o{ monitoring : "stay_id"
+    sejours  ||--o{ diagnostics : "stay_id"
+
+    patients {
+        String patient_hash PK "pseudonyme SHA-256 salé"
+        UInt16 birth_year "nullable (NULL si aberrant)"
+        String sex "M | F | vide"
+        String region_code "département"
+    }
+    sejours {
+        String stay_id PK
+        String patient_hash FK
+        String service_code "présent au référentiel services"
+        DateTime admission_ts "non NULL"
+        DateTime discharge_ts "nullable — NULL = séjour en cours"
+        String admission_mode "urgence | programme | mutation"
+        String discharge_mode "domicile | mutation | transfert | deces"
+        Float64 los_hours "durée — NULL si en cours"
+    }
+    monitoring {
+        String stay_id FK "rattaché à un séjour valide"
+        DateTime ts "PARTITION BY jour"
+        Int32 heart_rate "20-250 bpm, nullable"
+        Int32 spo2 "50-100 pourcent, nullable"
+        Float32 temp_c "30-45 degC, nullable"
+    }
+    diagnostics {
+        String stay_id FK
+        String code_cim10 "présent au référentiel cim10"
+        String type "principal | associe"
+    }
+    rejects {
+        String source "table d'origine"
+        String natural_key "clé de la ligne écartée"
+        String rule "code du contrôle violé"
+        String detail
+        DateTime detected_at
+    }

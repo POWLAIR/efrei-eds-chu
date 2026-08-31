@@ -119,6 +119,9 @@ Bilan : **15 000** séjours bruts → **14 864** séjours fiables (99,1 %). **16
 
 Cette section explicite **pourquoi** chaque règle, et pourquoi « écarter » plutôt que « corriger ».
 
+![Schéma de la base silver](silver.png)
+Base `silver` : 4 tables nettoyées (`patients`, `sejours`, `monitoring`, `diagnostics`) + `rejects` (journal d'audit des lignes écartées). Les notes indiquent les bornes et l'intégrité référentielle appliquées.
+
 ### Un rôle unique par couche
 
 Silver **ne fait que** nettoyer / dédupliquer / tracer : pas de typage (rôle du bronze), pas d'agrégation (rôle du gold). Cette séparation stricte rend le pipeline lisible et maintenable — on sait exactement où intervenir pour chaque type de problème.
