@@ -1,0 +1,18 @@
+# Planification quotidienne du pipeline EDS (Partie 2 — automatisation)
+# Installation :  crontab scripts/crontab.example
+# Prérequis    :  `make up` (conteneurs démarrés), .env présent, `uv sync`
+#
+# `eds run-daily` = ingest(jour) + transform + verify, tracé dans UN SEUL meta.runs
+# avec code retour propre. Incrémental et idempotent : rejouer un jour déjà traité
+# ne duplique rien (meta.ingested_files). En cas d'échec : `make replay DATE=...`.
+
+PROJECT=/home/paul/efrei-project/big-data
+SHELL=/bin/bash
+
+# Tous les jours à 02h15 : traitement complet du dépôt du jour.
+# Sur échec (ingestion, transfo ou contrôle de fiabilité), une ligne [ALERTE]
+# est écrite dans logs/cron.log et le run est marqué `error` dans meta.runs.
+15 2 * * *  cd $PROJECT && (uv run eds run-daily >> logs/cron.log 2>&1 || echo "[ALERTE] run-daily KO $(date --iso-8601=seconds)" >> logs/cron.log)
+
+# Tous les lundis à 03h00 : rappel de l'état des derniers runs + rejets de la semaine.
+0 3 * * 1   cd $PROJECT && uv run eds status >> logs/cron.log 2>&1
