@@ -1,0 +1,4 @@
+<clickhouse>
+    <!-- WSL2 / hôtes sans IPv6 : forcer l'écoute IPv4 -->
+    <listen_host>0.0.0.0</listen_host>
+</clickhouse>

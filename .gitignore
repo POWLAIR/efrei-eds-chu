@@ -1,0 +1,36 @@
+# Données (jamais versionnées — RGPD + volumétrie)
+/data/source-filestorage/
+/data/lake/
+/data/_work/
+*.parquet
+
+# Secrets & env
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Docker / Metabase
+/metabase-data/
+/.clickhouse/
+
+# Logs
+/logs/
+*.log
+
+# Exports Metabase temporaires (les *.json finaux sont versionnés)
+/dashboards/*.export.json
+
+# Playwright MCP (captures pilotées, artefacts de session)
+/.playwright-mcp/
+
+# Claude — on ignore la config locale mais on versionne le skill du projet
+/.claude/*
+!/.claude/skills/
+/.claude/skills/*/*.local.*
+# QA temporaires du générateur PDF
+/report/_qa_*.png

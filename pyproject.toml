@@ -1,0 +1,44 @@
+[project]
+name = "eds-chu-pipeline"
+version = "0.1.0"
+description = "Pipeline ELT médaillon de l'Entrepôt de Données de Santé du CHU (épreuve Big Data M2 E05)"
+requires-python = ">=3.12"
+dependencies = [
+    "clickhouse-connect>=0.8",
+    "httpx>=0.27",
+    "markdown-it-py>=3",
+    "pyarrow>=17",
+    "python-dotenv>=1.0",
+    "reportlab>=4.2",
+    "typer>=0.12",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pymupdf>=1.24",
+    "pytest>=8",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+eds = "pipeline.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pipeline"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+ignore = ["DTZ007"]  # strptime d'une date métier AAAA-MM-JJ -> objet date (sans tz, voulu)
+
+[tool.ruff.lint.per-file-ignores]
+"pipeline/cli.py" = ["B008"]  # idiome typer : Argument/Option en valeur par défaut
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
