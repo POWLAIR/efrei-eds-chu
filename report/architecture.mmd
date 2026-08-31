@@ -1,0 +1,38 @@
+flowchart TB
+    FS["source-filestorage/&lt;date&gt;/<br/>patients.csv · sejours.csv · diagnostics.json<br/>monitoring.parquet · referentiels/*.csv<br/><i>lecture seule — dépôt quotidien</i>"]
+
+    subgraph PY["Orchestration — Python (CLI eds)"]
+        direction TB
+        ING["ingest : copie filestorage → lake<br/>incrémental (hash) · pseudonymisation RGPD"]
+        TR["transform : envoie le SQL à ClickHouse<br/>(aucune donnée sortie du moteur)"]
+        VF["verify : réconciliation KPI ↔ sources<br/>k-anonymat · cohérence"]
+    end
+
+    subgraph CH["Entrepôt — ClickHouse (colonne, partitionné)"]
+        direction TB
+        LK["LAKE — data/lake/<br/>copie brute, patients/séjours pseudonymisés"]
+        BR["BRONZE — tables typées<br/>1 table par source"]
+        SV["SILVER — nettoyé · dédupliqué<br/>contrôles qualité → silver.rejects"]
+        GD["GOLD — dim_* · fact_sejour<br/>vues kpi_pilotage_* / kpi_recherche_* (k ≥ 5)"]
+        LK --> BR --> SV --> GD
+    end
+
+    subgraph MB["Restitution — Metabase"]
+        direction TB
+        DPIL["Dashboard Pilotage<br/>(groupe Pilotage · user ro_pilotage)"]
+        DREC["Dashboard Recherche<br/>(groupe Recherche · user ro_recherche)"]
+    end
+
+    META["meta.runs · meta.ingested_files<br/><i>traçabilité + incrémental</i>"]
+
+    FS -->|"flux entrant"| ING
+    ING --> LK
+    TR -.pilote.-> BR
+    TR -.pilote.-> SV
+    TR -.pilote.-> GD
+    VF -.contrôle.-> GD
+    GD -->|"SELECT — RBAC ClickHouse"| DPIL
+    GD -->|"SELECT — RBAC ClickHouse"| DREC
+    ING -.trace.-> META
+    TR -.trace.-> META
+    VF -.trace.-> META

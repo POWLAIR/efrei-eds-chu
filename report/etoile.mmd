@@ -1,0 +1,29 @@
+erDiagram
+    dim_patient ||--o{ fact_sejour : "patient_hash"
+    dim_service ||--o{ fact_sejour : "service_code"
+    dim_cim10   ||--o{ fact_sejour : "diag_principal"
+
+    fact_sejour {
+        string stay_id PK
+        string patient_hash FK
+        string service_code FK
+        string diag_principal FK
+        date   admission_date "dimension dégénérée"
+        float  los_days "mesure"
+        uint8  is_closed "mesure"
+        uint8  is_urgence "mesure"
+    }
+    dim_patient {
+        string patient_hash PK
+        string sex
+        string region_code
+        string age_band
+    }
+    dim_service {
+        string service_code PK
+        string service_label
+    }
+    dim_cim10 {
+        string code_cim10 PK
+        string libelle
+    }
