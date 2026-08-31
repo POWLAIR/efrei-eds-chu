@@ -1,7 +1,5 @@
 # Données (jamais versionnées — RGPD + volumétrie)
-/data/source-filestorage/
-/data/lake/
-/data/_work/
+/data/
 *.parquet
 
 # Secrets & env

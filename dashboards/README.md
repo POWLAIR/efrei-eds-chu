@@ -19,8 +19,8 @@ make dashboards  # = uv run eds dashboards  — idempotent
 | 2 groupes | `Pilotage`, `Recherche` — chacun peut interroger **sa** base, pas l'autre ; « All Users » n'interroge aucune EDS |
 | 2 utilisateurs de démo | `pilote@chu.local` / `chercheur@chu.local` (mots de passe dans `.env`) |
 | 2 collections | `Pilotage` / `Recherche` — lecture réservée au groupe correspondant |
-| 6 cartes | 1 requête SQL native par vue `gold.kpi_*` |
-| 2 dashboards | **Pilotage hospitalier** (4 cartes) · **Recherche clinique** (2 cartes) |
+| 8 cartes | 1 requête SQL native par vue `gold.kpi_*` |
+| 2 dashboards | **Pilotage hospitalier** (6 cartes) · **Recherche clinique** (2 cartes) |
 | Nettoyage | base d'exemple supprimée, collection *Examples* archivée |
 | Export | `dashboards/pilotage.json` · `dashboards/recherche.json` |
 
@@ -43,7 +43,7 @@ Deux niveaux, le second étant la vraie garantie :
 |---|---|
 | `01-cloisonnement-recherche.png` | connecté en `chercheur@chu.local` : seules la base **EDS — Recherche** et la collection **Recherche** sont visibles |
 | `02-rbac-clickhouse-denied.png` | `chercheur` lance `SELECT * FROM gold.kpi_pilotage_dms` sur la connexion Recherche → `ro_recherche: Not enough privileges … ACCESS_DENIED` |
-| `03-dashboard-pilotage.png` | dashboard Pilotage (DMS, urgences/j, réadmission 30 j = 5,34 %, alertes constantes) |
+| `03-dashboard-pilotage.png` | dashboard Pilotage (DMS, urgences/j, réadmission 30 j = 5,34 %, alertes constantes, charge par service, modes de sortie) |
 | `04-dashboard-recherche.png` | dashboard Recherche (prévalence par pathologie, cohorte âge × sexe) |
 
 ## Voie manuelle (repli, si l'API bloque)

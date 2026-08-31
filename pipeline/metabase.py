@@ -5,7 +5,7 @@
   - crée 2 connexions ClickHouse cloisonnées (ro_pilotage / ro_recherche)
   - crée 2 groupes + permissions de données (chaque groupe ne voit que SA base)
   - crée 1 utilisateur de démo par groupe
-  - crée 2 collections + 2 dashboards (6 cartes SQL natives sur les vues gold)
+  - crée 2 collections + 2 dashboards (8 cartes SQL natives sur les vues gold)
   - exporte les dashboards dans dashboards/*.json
 
 Toutes les opérations sont « find-or-create » : relancer ne duplique rien.
