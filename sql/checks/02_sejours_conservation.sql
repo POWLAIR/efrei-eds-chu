@@ -7,7 +7,7 @@ UNION ALL
 SELECT s.stay_id
 FROM silver.sejours s
 WHERE s.stay_id IN (
-    SELECT natural_key FROM silver.rejects
+    SELECT natural_key FROM clean.rejects
     WHERE source = 'sejours'
       AND rule IN ('sortie_avant_admission', 'admission_ts_invalide',
                    'duree_sejour_aberrante', 'service_hors_referentiel')

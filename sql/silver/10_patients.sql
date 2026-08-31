@@ -38,12 +38,12 @@ SELECT
     region_code
 FROM dedup;
 
--- Traces
-INSERT INTO silver.rejects (source, natural_key, rule, detail)
+-- Traces (journal de quarantaine — étape clean, hors silver)
+INSERT INTO clean.rejects (source, natural_key, rule, detail)
 SELECT 'patients', patient_hash, 'sex_non_normalise', 'sexe vide après normalisation'
 FROM silver.patients WHERE sex = '';
 
-INSERT INTO silver.rejects (source, natural_key, rule, detail)
+INSERT INTO clean.rejects (source, natural_key, rule, detail)
 SELECT 'patients', patient_hash, 'birth_year_aberrant', concat('birth_year=', toString(birth_year_raw))
 FROM
 (

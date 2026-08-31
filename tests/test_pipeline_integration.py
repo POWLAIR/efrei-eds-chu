@@ -23,7 +23,7 @@ def _count(c, table: str) -> int:
 
 
 def test_transform_idempotent():
-    """Rejouer bronze->silver->gold ne change aucun compte (rebuild complet)."""
+    """Rejouer bronze->clean->silver->gold ne change aucun compte (rebuild complet)."""
     c = _ch()
     if _count(c, "silver.sejours") == 0:
         pytest.skip("pipeline non exécuté — lancer `make all`")
@@ -31,7 +31,7 @@ def test_transform_idempotent():
     from pipeline.transform import run_all
 
     tables = ("silver.sejours", "silver.patients", "silver.monitoring",
-              "gold.fact_sejour", "silver.rejects")
+              "silver.pathologies", "gold.fact_sejour", "clean.rejects")
     before = {t: _count(c, t) for t in tables}
     run_all()
     after = {t: _count(c, t) for t in tables}
@@ -60,7 +60,7 @@ def test_ingest_incremental_deja_connu():
 
 
 def test_verify_passe_sur_jeu_fourni():
-    """Les 7 contrôles de réconciliation passent sur le jeu de données fourni."""
+    """Les 8 contrôles de réconciliation passent sur le jeu de données fourni."""
     c = _ch()
     if _count(c, "gold.fact_sejour") == 0:
         pytest.skip("pipeline non exécuté — lancer `make all`")
@@ -69,6 +69,19 @@ def test_verify_passe_sur_jeu_fourni():
 
     failed = [name for name, n in run_checks() if n]
     assert not failed, f"contrôles en échec : {failed}"
+
+
+def test_pathologies_couvre_diagnostics():
+    """silver.pathologies contient tout code_cim10 observé dans silver.diagnostics."""
+    c = _ch()
+    if _count(c, "silver.diagnostics") == 0:
+        pytest.skip("pipeline non exécuté — lancer `make all`")
+    orphelins = _count(
+        c,
+        "silver.diagnostics d "
+        "LEFT ANTI JOIN silver.pathologies p ON p.code_cim10 = d.code_cim10",
+    )
+    assert orphelins == 0
 
 
 def test_kanonymat_vues_recherche():

@@ -3,8 +3,12 @@
 
 CREATE DATABASE IF NOT EXISTS meta;
 CREATE DATABASE IF NOT EXISTS bronze;
+CREATE DATABASE IF NOT EXISTS clean;    -- étape de nettoyage : journal de quarantaine (clean.rejects)
 CREATE DATABASE IF NOT EXISTS silver;
 CREATE DATABASE IF NOT EXISTS gold;
+
+-- `clean` n'a ni rôle ni GRANT : artefact opérationnel d'audit, aucun consommateur
+-- Metabase / RBAC. Seul l'utilisateur `eds` (admin) y accède.
 
 -- --- Utilisateurs lecture seule, un par public --------------------------------
 CREATE USER IF NOT EXISTS ro_pilotage  IDENTIFIED WITH plaintext_password BY 'pilotage';

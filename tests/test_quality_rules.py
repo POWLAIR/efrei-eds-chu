@@ -19,12 +19,6 @@ def _ch():
 
 def test_bornes_physiologiques_monitoring():
     c = _ch()
-    c.command("CREATE DATABASE IF NOT EXISTS silver")
-    c.command(
-        "CREATE TABLE IF NOT EXISTS silver.rejects "
-        "(source LowCardinality(String), natural_key String, rule LowCardinality(String), "
-        "detail String, detected_at DateTime DEFAULT now()) ENGINE=MergeTree ORDER BY (source, rule)"
-    )
     # Une valeur clairement hors plage doit être détectable par la condition du silver.
     rows = c.query(
         "SELECT (250 BETWEEN 20 AND 250), (251 BETWEEN 20 AND 250), "

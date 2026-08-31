@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS gold.dim_cim10
 )
 ENGINE = MergeTree ORDER BY code_cim10;
 TRUNCATE TABLE gold.dim_cim10;
-INSERT INTO gold.dim_cim10 SELECT code_cim10, libelle FROM bronze.ref_cim10;
+-- dim_cim10 découle de silver.pathologies (codes CIM-10 observés en diagnostics).
+INSERT INTO gold.dim_cim10 SELECT code_cim10, libelle FROM silver.pathologies;
 
 -- Patient enrichi : tranche d'âge (calculée sur l'année de naissance — minimisation)
 CREATE TABLE IF NOT EXISTS gold.dim_patient

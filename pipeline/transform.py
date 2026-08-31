@@ -1,7 +1,10 @@
-"""Étapes 2-3 — Fiabiliser & Restituer : bronze -> silver -> gold, 100 % en SQL.
+"""Étapes 2-3 — Fiabiliser & Restituer : bronze -> clean -> silver -> gold, 100 % en SQL.
 
 Python se contente d'envoyer les fichiers sql/ dans l'ordre des couches.
 Aucune donnée ne sort de ClickHouse.
+
+La couche `clean` ne contient que le journal de quarantaine `clean.rejects` (DDL) ;
+il est alimenté au fil du filtrage par les transformations `sql/silver/*.sql`.
 """
 
 from __future__ import annotations
@@ -12,7 +15,7 @@ from pipeline.logging_conf import get_logger
 
 log = get_logger("eds.transform")
 
-LAYERS = ("bronze", "silver", "gold")
+LAYERS = ("bronze", "clean", "silver", "gold")
 
 
 def run_layer(layer: str) -> None:

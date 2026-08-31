@@ -40,7 +40,9 @@ def ingest(date: list[str] = typer.Option(..., "--date", help="Date(s) de dépô
 
 
 @app.command()
-def transform(layer: str = typer.Option("", "--layer", help="bronze|silver|gold (défaut: toutes)")):
+def transform(
+    layer: str = typer.Option("", "--layer", help="bronze|clean|silver|gold (défaut: toutes)"),
+):
     """Rejoue les transformations SQL du médaillon dans ClickHouse."""
     with track("transform", layer=layer or "all"):
         run_layer(layer) if layer else run_all()

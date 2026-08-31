@@ -1,5 +1,6 @@
 -- Silver — diagnostics : on ne garde que les diagnostics rattachés à un séjour valide
 -- et à un code CIM-10 connu du référentiel.
+-- Les codes conservés ici alimentent silver.pathologies (50_pathologies.sql).
 
 CREATE TABLE IF NOT EXISTS silver.diagnostics
 (
@@ -18,12 +19,13 @@ FROM bronze.diagnostics d
 INNER JOIN silver.sejours s ON s.stay_id = d.stay_id
 WHERE d.code_cim10 IN (SELECT code_cim10 FROM bronze.ref_cim10);
 
-INSERT INTO silver.rejects (source, natural_key, rule, detail)
+-- Traces (journal de quarantaine — étape clean, hors silver)
+INSERT INTO clean.rejects (source, natural_key, rule, detail)
 SELECT 'diagnostics', d.stay_id, 'sejour_inconnu', d.code_cim10
 FROM bronze.diagnostics d
 LEFT ANTI JOIN silver.sejours s ON s.stay_id = d.stay_id;
 
-INSERT INTO silver.rejects (source, natural_key, rule, detail)
+INSERT INTO clean.rejects (source, natural_key, rule, detail)
 SELECT 'diagnostics', d.stay_id, 'code_cim10_hors_referentiel', d.code_cim10
 FROM bronze.diagnostics d
 WHERE d.code_cim10 NOT IN (SELECT code_cim10 FROM bronze.ref_cim10);

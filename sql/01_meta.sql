@@ -4,8 +4,8 @@
 CREATE TABLE IF NOT EXISTS meta.runs
 (
     run_id        String,
-    action        LowCardinality(String),   -- ingest | transform | replay
-    layer         LowCardinality(String),   -- lake | bronze | silver | gold | all
+    action        LowCardinality(String),   -- ingest | transform | verify | replay | run-daily
+    layer         LowCardinality(String),   -- lake | bronze | clean | silver | gold | all
     business_date Nullable(Date),
     started_at    DateTime,
     finished_at   DateTime,
