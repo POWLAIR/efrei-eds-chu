@@ -11,7 +11,8 @@
   - [x] Dashboard **Recherche** : prévalence par pathologie, cohorte âge × sexe
   - [x] **Démonstration du cloisonnement** : `dashboards/captures/01-*` (base/collection),
         `02-*` (RBAC ClickHouse `ACCESS_DENIED`) ; détails `dashboards/README.md`
-  - [x] Exports versionnés : `dashboards/pilotage.json`, `dashboards/recherche.json`
+  - [x] Reproductible : définition dans `CARDS` / `DASHBOARDS` (`pipeline/steps/4_dashboards.py`),
+        rejouée à l'identique par `make dashboards`
 
 ## Partie 2 — Automatisation
 
@@ -19,7 +20,7 @@
 - [x] Gestion des erreurs : run en échec → `error` dans `meta.runs` + ligne `[ALERTE]` cron ; `make replay DATE=…`
 - [x] Journalisation : `logs/pipeline-*.log`
 - [x] Traçabilité : `meta.runs`, `meta.ingested_files`
-- [x] **Contrôle de fiabilité** : `eds verify` — 8 contrôles de réconciliation (`sql/checks/`)
+- [x] **Contrôle de fiabilité** : `eds verify` — 8 contrôles de réconciliation (`sql/5_checks/`)
 - [x] **Doc d'utilisation et de maintenance** : `README.md` + `.claude/skills/eds-run/SKILL.md`
 
 ## ★ Bonus — anonymisation à l'entrée du lake
@@ -32,8 +33,8 @@
 ## Liste de contrôle avant remise
 
 - [x] Le dépôt Git contient le code du pipeline (ingestion → transfos) + SQL versionné
-      (`sql/` : `00_databases`, `01_meta`, `bronze/`, `clean/`, `silver/`, `gold/`, `checks/`)
-- [x] Les dashboards sont exportés (`dashboards/*.json`) et documentés pour reproduction
+      (`sql/` : `0_init/`, `1_bronze/`, `2_clean/`, `3_silver/`, `4_gold/`, `5_checks/`)
+- [x] Les dashboards sont documentés et reproductibles (`dashboards/README.md` + captures)
 - [x] `README.md` : comment lancer & rejouer
 - [x] `make all` fonctionne à froid (seed + up + init-db + ingest + transform + verify + dashboards)
 - [x] `uv run pytest` au vert (12 tests)

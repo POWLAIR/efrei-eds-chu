@@ -90,7 +90,7 @@ Le dépôt est **quotidien** → traitement **batch**, simple et robuste. `cron`
 
 ### Pseudonymisation à l'entrée du lake (★ bonus)
 
-Avant toute écriture dans le lake, `pipeline/pseudonymize.py` applique :
+Avant toute écriture dans le lake, `pipeline/steps/1_lake.py` applique :
 
 | Champ | Transformation |
 |---|---|
@@ -226,7 +226,7 @@ Table de fait : `gold.fact_sejour`. Chaque chiffre est **reproductible** (`make 
 
 ## 8. Visualisations
 
-Deux dashboards Metabase provisionnés **automatiquement** et de façon idempotente par `make dashboards` (API REST, `pipeline/metabase.py`).
+Deux dashboards Metabase provisionnés **automatiquement** et de façon idempotente par `make dashboards` (API REST, `pipeline/steps/4_dashboards.py`).
 
 ### Dashboard « Pilotage hospitalier »
 

@@ -2,17 +2,17 @@
 
 | Contrainte | Ce qu'on attend | Où c'est traité dans ce repo |
 |---|---|---|
-| **Incrémental** | ingérer chaque jour les nouveaux fichiers, sans retraiter ni dupliquer | `meta.ingested_files` (hash du contenu) + `pipeline/ingest.py` |
+| **Incrémental** | ingérer chaque jour les nouveaux fichiers, sans retraiter ni dupliquer | `meta.ingested_files` (hash du contenu) + `pipeline/steps/1_lake.py` |
 | **Volume** | le monitoring est bien plus gros que le reste | ClickHouse colonne + `PARTITION BY toYYYYMMDD(ts)` sur `bronze/silver.monitoring` |
-| **RGPD — pseudonymisation** | aucune donnée identifiante ne doit entrer dans l'entrepôt ; pseudonyme **stable** (jointures préservées) | `pipeline/pseudonymize.py`, appliqué **avant** écriture dans le lake |
+| **RGPD — pseudonymisation** | aucune donnée identifiante ne doit entrer dans l'entrepôt ; pseudonyme **stable** (jointures préservées) | `pipeline/steps/1_lake.py`, appliqué **avant** écriture dans le lake |
 | **RGPD — minimisation** | ne conserver que ce qui est utile | `nir/nom/prenom` supprimés ; `birth_date → birth_year` ; âge en tranches |
-| **RGPD — cloisonnement** | pilotage et recherche ne voient pas les mêmes données → droits distincts | users ClickHouse `ro_pilotage` / `ro_recherche` + rôles (`sql/00_databases.sql`) ; 2 connexions Metabase |
+| **RGPD — cloisonnement** | pilotage et recherche ne voient pas les mêmes données → droits distincts | users ClickHouse `ro_pilotage` / `ro_recherche` + rôles (`sql/0_init/00_databases.sql`) ; 2 connexions Metabase |
 | **RGPD — petits effectifs** | ne pas diffuser les cohortes de moins de 5 patients | `HAVING … >= 5` **dans les vues** `gold.kpi_recherche_*` |
 | **Traçabilité** | savoir d'où vient chaque donnée et quand elle a été traitée | `meta.runs` + `meta.ingested_files` + logs `logs/pipeline-*.log` |
 
 ## Pseudonymisation — détail (★ bonus)
 
-À l'ingestion, `pipeline/pseudonymize.py` :
+À l'ingestion, `pipeline/steps/1_lake.py` (section « Pseudonymisation RGPD ») :
 
 1. `patient_id` → `patient_hash = sha256(PSEUDO_SALT + ":" + patient_id)[:16]`
    → **déterministe** (même entrée ⇒ même sortie ⇒ jointures OK) et **non réversible**.

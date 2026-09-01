@@ -78,9 +78,10 @@ Le pipeline est **incrémental et idempotent** :
 
 ```
 docs/context/     notes de contexte tirées des PDF/zip du sujet
-pipeline/         CLI Python : ingest / transform / verify / run-daily / replay / dashboards
-sql/              00_databases, 01_meta, bronze/, clean/, silver/, gold/, checks/
-dashboards/       provisioning Metabase + exports JSON + captures cloisonnement
+pipeline/         CLI `eds` (cli.py) + plomberie (config, clickhouse, observabilite)
+pipeline/steps/   les 4 étapes, numérotées : 1_lake, 2_medallion, 3_verify, 4_dashboards
+sql/              0_init/ · 1_bronze/ · 2_clean/ · 3_silver/ · 4_gold/ · 5_checks/
+dashboards/       README (provisioning Metabase) + captures du cloisonnement
 scripts/          seed_filestorage.sh, crontab.example
 report/           dossier.md + generate_pdf.py ; schemas/ (mermaid → PNG) → dossier.pdf
 tests/            pytest (unitaires + intégration)
