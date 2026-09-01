@@ -9,8 +9,9 @@ make up          # ClickHouse + Metabase
 make dashboards  # = uv run eds dashboards  — idempotent
 ```
 
-`pipeline/metabase.py` provisionne **tout** via l'API REST, de façon *find-or-create*
-(relancer ne duplique rien) :
+`pipeline/steps/4_dashboards.py` provisionne **tout** via l'API REST, de façon *find-or-create*
+(relancer ne duplique rien). La définition des dashboards — cartes, SQL, disposition —
+vit dans les constantes `CARDS` / `DASHBOARDS` de ce fichier : c'est la source de vérité.
 
 | Étape | Détail |
 |---|---|
@@ -22,7 +23,6 @@ make dashboards  # = uv run eds dashboards  — idempotent
 | 8 cartes | 1 requête SQL native par vue `gold.kpi_*` |
 | 2 dashboards | **Pilotage hospitalier** (6 cartes) · **Recherche clinique** (2 cartes) |
 | Nettoyage | base d'exemple supprimée, collection *Examples* archivée |
-| Export | `dashboards/pilotage.json` · `dashboards/recherche.json` |
 
 ## Le cloisonnement des droits
 
@@ -31,7 +31,7 @@ Deux niveaux, le second étant la vraie garantie :
 1. **Metabase** — permissions de données par groupe + permissions de collections :
    un membre du groupe *Recherche* ne voit ni la base *EDS — Pilotage*, ni la
    collection/dashboard *Pilotage*.
-2. **ClickHouse RBAC** (`sql/00_databases.sql`) — `ro_recherche` n'a de `GRANT SELECT`
+2. **ClickHouse RBAC** (`sql/0_init/00_databases.sql`) — `ro_recherche` n'a de `GRANT SELECT`
    que sur `gold.kpi_recherche_*`. Même en SQL libre via Metabase, une requête sur
    `gold.kpi_pilotage_dms` renvoie `Not enough privileges (ACCESS_DENIED)`.
    Les vues recherche sont `SQL SECURITY DEFINER` → le k-anonymat (`HAVING ≥ 5`)
@@ -55,10 +55,10 @@ Deux niveaux, le second étant la vraie garantie :
    base, *No* sur l'autre ; `All Users` : *No* sur les deux.
 4. `Admin → Permissions → Collections` → collection `Pilotage` visible par le groupe
    `Pilotage` seulement (idem `Recherche`).
-5. Créer les 6 questions SQL (cf. `CARDS` dans `pipeline/metabase.py`) puis les 2 dashboards.
+5. Créer les 6 questions SQL (cf. `CARDS` dans `pipeline/steps/4_dashboards.py`) puis les 2 dashboards.
 
-## Reproduire depuis l'export
+## Reproductibilité
 
-Les `*.json` sont des dumps de `GET /api/dashboard/:id` (référence de contenu).
-La source de vérité reste `make dashboards` : sur un Metabase vierge il recrée
-l'ensemble à l'identique.
+Sur un Metabase vierge, `make dashboards` recrée l'ensemble à l'identique depuis
+`CARDS` / `DASHBOARDS`. Les captures de `captures/` figent le rendu et la preuve
+du cloisonnement à la remise.
