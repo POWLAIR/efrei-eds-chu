@@ -39,7 +39,7 @@ Le même patient revient d'un jour à l'autre (retour quotidien du dossier) : 16
 
 ## 3. Architecture cible — schéma justifié
 
-![Architecture médaillon de l'EDS](architecture.png)
+![Architecture médaillon de l'EDS](schemas/architecture.png)
 Chaîne : filestorage → lake → bronze → silver → gold → dashboards, plus une étape *clean* (quarantaine). Python pilote, ClickHouse transforme.
 
 ### Patron « médaillon » et ELT
@@ -119,7 +119,7 @@ Bilan : **15 000** séjours bruts → **14 864** séjours fiables (99,1 %). **16
 
 Cette section explicite **pourquoi** chaque règle, et pourquoi « écarter » plutôt que « corriger ».
 
-![Schéma de la base silver](silver.png)
+![Schéma de la base silver](schemas/silver.png)
 Base `silver` : une chaîne reliée **`patients → sejours → diagnostics → pathologies`**, plus le flux **`monitoring` autonome** (5 tables). Le journal des lignes écartées est **sorti de silver** — étape *clean* (§ 4). Les notes indiquent les bornes et l'intégrité référentielle appliquées.
 
 ### Un rôle unique par couche
@@ -182,7 +182,7 @@ Chaque couche fait `TRUNCATE` + `INSERT` depuis la couche amont — y compris `c
 
 ## 6. Modélisation — schéma en étoile
 
-![Schéma en étoile de la couche gold](etoile.png)
+![Schéma en étoile de la couche gold](schemas/etoile.png)
 
 - **Fait** : `fact_sejour` — 1 ligne = 1 séjour valide. Mesures : `los_days`, `is_closed`, `is_urgence`, comptages.
 - **Dimensions** : `dim_patient` (sexe, région, tranche d'âge), `dim_service` (code → libellé), `dim_cim10` (code → libellé, **alimentée par `silver.pathologies`**). La date d'admission est une **dimension dégénérée** portée par le fait.

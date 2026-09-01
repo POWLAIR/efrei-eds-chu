@@ -3,8 +3,8 @@
 ## Partie 1 — Interface d'analyse
 
 - [x] **Dossier** : `report/dossier.md` (11 sections) → `report/dossier.pdf` via `make report`
-      (design corporate repris du skill `rapport-performance-pdf`) ; schémas `report/architecture.png`,
-      `report/silver.png` et `report/etoile.png` (`make schema`)
+      (design corporate repris du skill `rapport-performance-pdf`) ; schémas mermaid dans
+      `report/schemas/` — `bronze` · `architecture` · `silver` · `etoile` (`make schema`)
 - [x] **Interface** : 2 dashboards Metabase, provisionnés par `make dashboards` (idempotent)
   - [x] Dashboard **Pilotage** (6 cartes) : DMS, urgences/jour, réadmission 30 j, alertes
         constantes, charge par service, modes de sortie

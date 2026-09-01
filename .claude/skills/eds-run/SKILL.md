@@ -65,7 +65,7 @@ et le run est marqué `error` dans `meta.runs`. Surveillance : `grep ALERTE logs
 
 ## Dossier de rendu
 
-`make schema` régénère `report/architecture.png` / `report/etoile.png` depuis les `.mmd`.
+`make schema` régénère les PNG de `report/schemas/` (`bronze`, `architecture`, `silver`, `etoile`) depuis les `.mmd`.
 `make report` régénère `report/dossier.pdf` depuis `report/dossier.md`
 (`report/generate_pdf.py` — QA visuelle avec `--qa` : PNG par page, à supprimer ensuite).
 

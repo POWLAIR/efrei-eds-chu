@@ -82,7 +82,7 @@ pipeline/         CLI Python : ingest / transform / verify / run-daily / replay 
 sql/              00_databases, 01_meta, bronze/, clean/, silver/, gold/, checks/
 dashboards/       provisioning Metabase + exports JSON + captures cloisonnement
 scripts/          seed_filestorage.sh, crontab.example
-report/           dossier.md + generate_pdf.py + schémas mermaid → dossier.pdf
+report/           dossier.md + generate_pdf.py ; schemas/ (mermaid → PNG) → dossier.pdf
 tests/            pytest (unitaires + intégration)
 ```
 

@@ -1,0 +1,43 @@
+erDiagram
+    patients     ||--o{ sejours     : "patient_hash"
+    ref_services ||--o{ sejours     : "service_code"
+    sejours      ||--o{ monitoring  : "stay_id"
+    sejours      ||--o{ diagnostics : "stay_id"
+    ref_cim10    ||--o{ diagnostics : "code_cim10"
+
+    patients {
+        String patient_hash "pseudonyme SHA-256 salé"
+        UInt16 birth_year "nullable"
+        String sex
+        String region_code
+        Date business_date "date du dépôt — toutes les versions empilées"
+    }
+    sejours {
+        String stay_id
+        String patient_hash
+        String service_code
+        DateTime admission_ts "nullable (parseDateTimeBestEffortOrNull)"
+        DateTime discharge_ts "nullable — vide = séjour en cours"
+        String admission_mode
+        String discharge_mode
+    }
+    monitoring {
+        String stay_id
+        DateTime ts "PARTITION BY jour"
+        Int32 heart_rate "nullable"
+        Int32 spo2 "nullable"
+        Float32 temp_c "nullable"
+    }
+    diagnostics {
+        String stay_id
+        String code_cim10
+        String type "principal | associe"
+    }
+    ref_services {
+        String service_code
+        String service_label
+    }
+    ref_cim10 {
+        String code_cim10
+        String libelle
+    }

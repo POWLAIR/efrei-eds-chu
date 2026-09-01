@@ -85,10 +85,11 @@ test: ## Tests unitaires (pseudonymisation, règles qualité)
 MMDC = npx --yes @mermaid-js/mermaid-cli
 
 .PHONY: schema
-schema: ## Exporte les schémas mermaid en PNG (report/*.png)
-	$(MMDC) -i report/architecture.mmd -o report/architecture.png -b white -w 1600
-	$(MMDC) -i report/silver.mmd       -o report/silver.png       -b white -w 1500
-	$(MMDC) -i report/etoile.mmd       -o report/etoile.png       -b white -w 1400
+schema: ## Exporte les schémas mermaid en PNG (report/schemas/*.png)
+	$(MMDC) -i report/schemas/architecture.mmd -o report/schemas/architecture.png -b white -w 1600
+	$(MMDC) -i report/schemas/bronze.mmd       -o report/schemas/bronze.png       -b white -w 1500
+	$(MMDC) -i report/schemas/silver.mmd       -o report/schemas/silver.png       -b white -w 1500
+	$(MMDC) -i report/schemas/etoile.mmd       -o report/schemas/etoile.png       -b white -w 1400
 
 .PHONY: report
 report: schema ## Génère report/dossier.pdf depuis report/dossier.md (design corporate)
