@@ -1,4 +1,9 @@
-"""Configuration du pipeline — lue depuis .env (ou l'environnement)."""
+"""Plomberie — réglages du pipeline chargés depuis `.env` (ou l'environnement).
+
+Expose l'objet `settings` (hôte/port ClickHouse, chemins `data/lake` et `sql/`,
+sel de pseudonymisation, identifiants Metabase et users RBAC…) et les constantes
+`SOURCES` / `IDENTIFYING_SOURCES`. Aucune logique : que des réglages.
+"""
 
 from __future__ import annotations
 
@@ -55,7 +60,6 @@ class Settings:
     lake_dir: Path = ROOT / os.getenv("LAKE_DIR", "data/lake").removeprefix("./")
     sql_dir: Path = ROOT / "sql"
     logs_dir: Path = ROOT / "logs"
-    dashboards_dir: Path = ROOT / "dashboards"
 
     def require_salt(self) -> str:
         if not self.pseudo_salt or self.pseudo_salt.startswith("change-me"):

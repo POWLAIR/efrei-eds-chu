@@ -4,7 +4,7 @@ import os
 
 os.environ.setdefault("PSEUDO_SALT", "sel-de-test-pour-pytest-1234567890")
 
-from pipeline import pseudonymize as P
+from pipeline.steps import lake as P  # la pseudonymisation vit dans l'étape lake
 
 
 def test_hash_deterministe():

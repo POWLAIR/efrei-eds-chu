@@ -39,6 +39,7 @@ ignore = ["DTZ007"]  # strptime d'une date métier AAAA-MM-JJ -> objet date (san
 
 [tool.ruff.lint.per-file-ignores]
 "pipeline/cli.py" = ["B008"]  # idiome typer : Argument/Option en valeur par défaut
+"pipeline/steps/[0-9]*.py" = ["N999"]  # noms de modules numérotés volontaires (ordre du pipeline)
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

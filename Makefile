@@ -40,7 +40,7 @@ nuke: ## Arrête et SUPPRIME les volumes (remise à zéro totale)
 
 .PHONY: init-db
 init-db: ## Crée les bases médaillon, meta et les users RBAC
-	$(RUN) run --sql-only sql/00_databases.sql sql/01_meta.sql
+	$(RUN) run --sql-only sql/0_init/00_databases.sql sql/0_init/01_meta.sql
 
 ## --- Pipeline -------------------------------------------------------------
 DATE_ARGS = $(if $(DATE),--date $(DATE),$(foreach d,$(DATES),--date $(d)))

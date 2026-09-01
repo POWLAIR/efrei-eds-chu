@@ -28,12 +28,12 @@ def test_transform_idempotent():
     if _count(c, "silver.sejours") == 0:
         pytest.skip("pipeline non exécuté — lancer `make all`")
 
-    from pipeline.transform import run_all
+    from pipeline.steps import medallion
 
     tables = ("silver.sejours", "silver.patients", "silver.monitoring",
               "silver.pathologies", "gold.fact_sejour", "clean.rejects")
     before = {t: _count(c, t) for t in tables}
-    run_all()
+    medallion.run_all()
     after = {t: _count(c, t) for t in tables}
     assert before == after
 
@@ -65,9 +65,9 @@ def test_verify_passe_sur_jeu_fourni():
     if _count(c, "gold.fact_sejour") == 0:
         pytest.skip("pipeline non exécuté — lancer `make all`")
 
-    from pipeline.verify import run_checks
+    from pipeline.steps import verify
 
-    failed = [name for name, n in run_checks() if n]
+    failed = [name for name, n in verify.run_checks() if n]
     assert not failed, f"contrôles en échec : {failed}"
 
 

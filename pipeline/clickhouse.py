@@ -1,7 +1,8 @@
-"""Wrapper minimal autour de clickhouse-connect.
+"""Plomberie — seul module qui parle au moteur ClickHouse (clickhouse-connect).
 
-Sert à : exécuter un fichier .sql (transformations du médaillon) et lancer des
-requêtes de contrôle. Le SQL vit dans sql/, versionné — Python ne fait que l'envoyer.
+`client()` (connexion), `run_sql_file()` (envoie un `.sql` versionné de `sql/`),
+`query()` et `insert()` pour les contrôles et la traçabilité. Python n'exécute
+aucune transformation : il envoie le SQL, la donnée ne sort pas du moteur.
 """
 
 from __future__ import annotations
@@ -12,7 +13,7 @@ from typing import Any
 import clickhouse_connect
 
 from pipeline.config import settings
-from pipeline.logging_conf import get_logger
+from pipeline.observabilite import get_logger
 
 log = get_logger("eds.ch")
 

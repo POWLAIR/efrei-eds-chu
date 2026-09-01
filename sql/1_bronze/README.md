@@ -3,7 +3,7 @@
 Première couche dans ClickHouse : **une table par source**, peu transformée. On lit
 les fichiers du lake, on **type** les colonnes, et c'est tout. Aucun nettoyage,
 aucune déduplication, aucun contrôle d'intégrité — ça, c'est le rôle du
-[silver](../silver/) (et le journal des rejets, celui de [clean](../clean/)).
+[silver](../3_silver/) (et le journal des rejets, celui de [clean](../2_clean/)).
 
 ![Schéma de la couche bronze](../../report/schemas/bronze.png)
 

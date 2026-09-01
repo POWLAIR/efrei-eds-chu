@@ -1,6 +1,6 @@
-"""Contrôles de fiabilité — `eds verify`.
+"""Étape 3 · verify — contrôles de fiabilité (`eds verify`), joués après le gold.
 
-Chaque fichier `sql/checks/*.sql` renvoie **0 ligne si le contrôle passe**, et les
+Chaque fichier `sql/5_checks/*.sql` renvoie **0 ligne si le contrôle passe**, et les
 lignes fautives sinon. `verify()` sort en exception si au moins un contrôle échoue,
 de sorte que `make verify` / le cron s'arrêtent en erreur.
 """
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pipeline.clickhouse import client
 from pipeline.config import settings
-from pipeline.logging_conf import get_logger
+from pipeline.observabilite import get_logger
 
 log = get_logger("eds.verify")
 
@@ -20,7 +20,7 @@ class VerificationError(RuntimeError):
 
 def run_checks() -> list[tuple[str, int]]:
     """Retourne la liste (nom, nb_lignes_fautives). nb=0 => OK."""
-    checks_dir = settings.sql_dir / "checks"
+    checks_dir = settings.sql_dir / "5_checks"
     results: list[tuple[str, int]] = []
     c = client()
     for f in sorted(checks_dir.glob("*.sql")):

@@ -1,4 +1,7 @@
-"""CLI du pipeline EDS.  `uv run eds --help`"""
+"""Point d'entrée `eds` (Typer) — mappe les sous-commandes (ingest, transform,
+verify, run-daily, replay, status, dashboards) sur les étapes de `pipeline/steps/`.
+Aucune logique métier ici.  `uv run eds --help`
+"""
 
 from __future__ import annotations
 
@@ -7,10 +10,10 @@ from datetime import UTC, datetime
 import typer
 
 from pipeline.clickhouse import query, run_sql_file
-from pipeline.ingest import ingest_date
-from pipeline.logging_conf import get_logger
-from pipeline.runs import track
-from pipeline.transform import run_all, run_layer
+from pipeline.observabilite import get_logger, track
+
+# verify / dashboards : import paresseux dans leur commande (garde `eds --help` léger)
+from pipeline.steps import lake, medallion
 
 app = typer.Typer(
     add_completion=False, help="Pipeline ELT médaillon de l'Entrepôt de Données de Santé du CHU."
@@ -35,7 +38,7 @@ def ingest(date: list[str] = typer.Option(..., "--date", help="Date(s) de dépô
     """Récupère les fichiers du filestorage vers le lake (pseudonymisé, incrémental)."""
     for d in date:
         with track("ingest", layer="lake", business_date=d):
-            copied = ingest_date(d)
+            copied = lake.ingest_date(d)
             log.info("%s : %s", d, copied or "rien de nouveau")
 
 
@@ -44,37 +47,39 @@ def transform(
     layer: str = typer.Option("", "--layer", help="bronze|clean|silver|gold (défaut: toutes)"),
 ):
     """Rejoue les transformations SQL du médaillon dans ClickHouse."""
+    if layer and layer not in medallion.LAYERS:
+        raise typer.BadParameter(f"couche inconnue : {layer!r}", param_hint="--layer")
     with track("transform", layer=layer or "all"):
-        run_layer(layer) if layer else run_all()
+        medallion.run_layer(layer) if layer else medallion.run_all()
 
 
 @app.command()
 def replay(date: str = typer.Option(..., "--date", help="Date à rejouer AAAA-MM-JJ")):
     """Reprise sur incident : ré-ingère une date puis rejoue les transformations."""
     with track("replay", business_date=date):
-        ingest_date(date)
-        run_all()
+        lake.ingest_date(date)
+        medallion.run_all()
 
 
 @app.command()
 def verify():
     """Contrôles de fiabilité (réconciliation KPI ↔ sources, k-anonymat, cohérence). Sort ≠ 0 si échec."""
-    from pipeline.verify import verify as _verify
+    from pipeline.steps import verify as verify_step
 
     with track("verify"):
-        _verify()
+        verify_step.verify()
 
 
 @app.command(name="run-daily")
 def run_daily(date: str = typer.Option("", "--date", help="Défaut : aujourd'hui (AAAA-MM-JJ)")):
     """Traitement quotidien complet (ingest + transforme + vérifie) dans un seul run tracé."""
-    from pipeline.verify import verify as _verify
+    from pipeline.steps import verify as verify_step
 
     day = date or datetime.now(UTC).strftime("%Y-%m-%d")
     with track("run-daily", business_date=day):
-        ingest_date(day)
-        run_all()
-        _verify()
+        lake.ingest_date(day)
+        medallion.run_all()
+        verify_step.verify()
     log.info("run-daily %s : terminé", day)
 
 
@@ -90,15 +95,11 @@ def status(limit: int = 15):
 
 
 @app.command()
-def dashboards(
-    export: bool = typer.Option(
-        True, "--export/--no-export", help="Exporter les dashboards en JSON"
-    ),
-):
+def dashboards():
     """Provisionne Metabase : connexions, groupes, permissions, 2 dashboards (idempotent)."""
-    from pipeline.metabase import provision
+    from pipeline.steps import dashboards as dashboards_step
 
-    provision(export=export)
+    dashboards_step.provision()
 
 
 if __name__ == "__main__":

@@ -1,5 +1,15 @@
 -- Bases du médaillon + cloisonnement RBAC (RGPD : pilotage ≠ recherche)
--- Idempotent : rejouable sans risque.
+-- Idempotent : rejouable sans risque. Rejoué par `make init-db`.
+--
+-- Cloisonnement (le vrai, physique — cf. dossier § 9) :
+--   role_pilotage  -> SELECT sur gold.kpi_pilotage_*  uniquement
+--   role_recherche -> SELECT sur gold.kpi_recherche_* uniquement (k-anonymat déjà dans la vue)
+--   ro_pilotage / ro_recherche : users lecture seule, un par public, utilisés par Metabase
+--
+-- Vérifier :  SHOW GRANTS FOR ro_pilotage;   SHOW GRANTS FOR ro_recherche;
+-- Test négatif (doit échouer « Not enough privileges ») :
+--   docker exec -it eds-clickhouse clickhouse-client -u ro_recherche --password recherche \
+--     --query "SELECT * FROM gold.kpi_pilotage_dms"
 
 CREATE DATABASE IF NOT EXISTS meta;
 CREATE DATABASE IF NOT EXISTS bronze;

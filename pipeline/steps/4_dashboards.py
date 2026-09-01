@@ -1,4 +1,4 @@
-"""Provisioning Metabase via l'API REST — idempotent.
+"""Étape 4 · dashboards — restitution : provisioning Metabase via l'API REST, idempotent.
 
 `uv run eds dashboards` :
   - crée le compte admin au 1er lancement
@@ -6,22 +6,22 @@
   - crée 2 groupes + permissions de données (chaque groupe ne voit que SA base)
   - crée 1 utilisateur de démo par groupe
   - crée 2 collections + 2 dashboards (8 cartes SQL natives sur les vues gold)
-  - exporte les dashboards dans dashboards/*.json
 
 Toutes les opérations sont « find-or-create » : relancer ne duplique rien.
+La définition des dashboards (cartes, SQL, disposition) vit dans `CARDS` /
+`DASHBOARDS` ci-dessous — c'est la source de vérité, `make dashboards` la rejoue.
 """
 
 from __future__ import annotations
 
 import contextlib
-import json
 import time
 from typing import Any
 
 import httpx
 
 from pipeline.config import settings
-from pipeline.logging_conf import get_logger
+from pipeline.observabilite import get_logger
 
 log = get_logger("eds.metabase")
 
@@ -395,15 +395,8 @@ def ensure_dashboard(mb: MB, name: str, coll_id: int, card_ids: list[int]) -> in
     return dash_id
 
 
-def export_dashboard(mb: MB, dash_id: int, filename: str) -> None:
-    dash = mb.get(f"/api/dashboard/{dash_id}")
-    out = settings.dashboards_dir / filename
-    out.write_text(json.dumps(dash, indent=2, ensure_ascii=False), encoding="utf-8")
-    log.info("export -> %s", out)
-
-
 # --- Orchestration ---------------------------------------------------------
-def provision(export: bool = True) -> None:
+def provision() -> None:
     mb = MB()
     wait_ready(mb)
     bootstrap_session(mb)
@@ -440,16 +433,8 @@ def provision(export: bool = True) -> None:
 
     card_ids = {spec["name"]: ensure_card(mb, spec, db_ids, coll_ids) for spec in CARDS}
 
-    dash_ids = {}
     for name, group, card_names in DASHBOARDS:
-        dash_ids[group] = ensure_dashboard(
-            mb, name, coll_ids[group], [card_ids[n] for n in card_names]
-        )
+        ensure_dashboard(mb, name, coll_ids[group], [card_ids[n] for n in card_names])
 
     cleanup_defaults(mb)
-
-    if export:
-        export_dashboard(mb, dash_ids[GROUP_PILOTAGE], "pilotage.json")
-        export_dashboard(mb, dash_ids[GROUP_RECHERCHE], "recherche.json")
-
     log.info("✓ Metabase provisionné — %s", settings.mb_url)
