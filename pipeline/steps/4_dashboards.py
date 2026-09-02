@@ -44,19 +44,19 @@ CARDS: list[dict[str, Any]] = [
         "name": "Passages aux urgences par jour",
         "db": DB_PILOTAGE,
         "sql": (
-            "SELECT jour, passages_urgence, admissions_totales "
-            "FROM gold.kpi_pilotage_urgences_jour ORDER BY jour"
+            "SELECT admission_date, nb_passages, nb_encore_presents "
+            "FROM gold.kpi_pilotage_urgences_jour ORDER BY admission_date"
         ),
         "display": "line",
         "viz": {
-            "graph.dimensions": ["jour"],
-            "graph.metrics": ["passages_urgence", "admissions_totales"],
+            "graph.dimensions": ["admission_date"],
+            "graph.metrics": ["nb_passages", "nb_encore_presents"],
         },
     },
     {
         "name": "Taux de réadmission à 30 jours (%)",
         "db": DB_PILOTAGE,
-        "sql": "SELECT taux_pct FROM gold.kpi_pilotage_readmission_30j",
+        "sql": "SELECT taux_readmission_30j_pct FROM gold.kpi_pilotage_readmission_30j",
         "display": "scalar",
         "viz": {},
     },
@@ -64,14 +64,13 @@ CARDS: list[dict[str, Any]] = [
         "name": "Relevés de constantes en alerte par jour",
         "db": DB_PILOTAGE,
         "sql": (
-            "SELECT jour, alertes_fc, alertes_spo2, alertes_temp "
+            "SELECT jour, nb_alertes, taux_alertes_pct "
             "FROM gold.kpi_pilotage_alertes_constantes ORDER BY jour"
         ),
         "display": "bar",
         "viz": {
             "graph.dimensions": ["jour"],
-            "graph.metrics": ["alertes_fc", "alertes_spo2", "alertes_temp"],
-            "stackable.stack_type": "stacked",
+            "graph.metrics": ["nb_alertes"],
         },
     },
     {
@@ -95,21 +94,21 @@ CARDS: list[dict[str, Any]] = [
         "name": "Prévalence par pathologie (cohortes ≥ 5)",
         "db": DB_RECHERCHE,
         "sql": (
-            "SELECT libelle, cohorte_patients FROM gold.kpi_recherche_prevalence "
-            "ORDER BY cohorte_patients DESC LIMIT 15"
+            "SELECT libelle_cim10, nb_patients FROM gold.kpi_recherche_prevalence "
+            "ORDER BY nb_patients DESC LIMIT 15"
         ),
         "display": "row",
-        "viz": {"graph.dimensions": ["libelle"], "graph.metrics": ["cohorte_patients"]},
+        "viz": {"graph.dimensions": ["libelle_cim10"], "graph.metrics": ["nb_patients"]},
     },
     {
-        "name": "Description de cohorte : âge × sexe",
+        "name": "Description de cohorte : pathologie × âge × sexe",
         "db": DB_RECHERCHE,
         "sql": (
-            "SELECT age_band, sex, nb_patients FROM gold.kpi_recherche_cohorte_age_sexe "
-            "ORDER BY age_band, sex"
+            "SELECT code_cim10, tranche_age, sexe, nb_patients "
+            "FROM gold.kpi_recherche_cohorte_age_sexe ORDER BY code_cim10, tranche_age, sexe"
         ),
-        "display": "bar",
-        "viz": {"graph.dimensions": ["age_band", "sex"], "graph.metrics": ["nb_patients"]},
+        "display": "table",
+        "viz": {},
     },
 ]
 

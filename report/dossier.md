@@ -7,7 +7,7 @@ Sources | 6
 Jours ingérés | 28
 Séjours fiables | 6 729
 Patients | 6 000
-Contrôles verify | 8/8
+Contrôles verify | 9/9
 ```
 
 ## 1. Le besoin
@@ -108,9 +108,15 @@ Principe imposé par le sujet : le traitement attendu est **simple** — on **é
 | Source | Règle | Lignes écartées |
 |---|---|---|
 | monitoring | valeur hors plage physiologique (FC 20-250, SpO2 50-100, temp 30-45) | 858 |
-| diagnostics | diagnostic rattaché à un séjour écarté en silver | 127 |
 | sejours | `discharge_ts < admission_ts` (incohérence temporelle) | 68 |
-| sejours / patients | `birth_year` aberrant · durée > 180 j · service hors référentiel · sexe non normalisable · `code_cim10` hors référentiel | 0 (aucun cas sur ce jeu) |
+| diagnostics | `stay_id` totalement inconnu du bronze · `code_cim10` hors référentiel | 0 (aucun cas sur ce jeu) |
+| sejours / patients | `birth_year` aberrant · durée > 180 j · service hors référentiel · sexe non normalisable | 0 (aucun cas sur ce jeu) |
+
+> Les **127 diagnostics** portés par les 68 séjours écartés pour incohérence de dates ne
+> sont **plus rejetés** : l'erreur est sur les *dates* du séjour, pas sur le codage — la
+> pathologie du patient reste vraie. Ils sont **conservés** dans `silver.diagnostics` (et
+> alimentent prévalence / cohortes) tout en restant **hors** `gold.fact_sejour` (durées).
+> Cf. § 5 et le comparatif § 16.
 
 Bilan : **6 797** séjours bruts → **6 729** séjours fiables (99,0 %). **18 000** lignes patients (3 instantanés) → **6 000** patients (déduplication). Le fait `gold.fact_sejour` compte exactement 6 729 lignes (cf. contrôle de réconciliation, § 7).
 
@@ -159,9 +165,21 @@ Décision : dès qu'**une** constante renseignée est hors borne, on écarte **t
 
 Le monitoring est un **flux de faits volumineux** (constantes au chevet) traité **indépendamment** de `silver.sejours` : la table n'est reliée à rien. Sur ce jeu, tous les `stay_id` du monitoring existent bien dans les séjours bruts, mais **520 relevés (1,3 %)** portent sur un séjour **écarté par un contrôle qualité silver** : ils sont **conservés** — c'est de la télémétrie réelle, et aucun KPI ne joint monitoring aux séjours (`kpi_pilotage_alertes_constantes` agrège par jour). Le refuser reviendrait à jeter des mesures physiologiques valides. Ce taux de rattachement partiel reste un **signal de qualité à remonter au CHU** (§ 11). Seules les bornes physiologiques restent appliquées.
 
-### Diagnostics — jointure stricte (127 rejets)
+### Diagnostics — séjour réel + code au référentiel (0 rejet sur ce jeu)
 
-On ne garde que les diagnostics rattachés à un séjour silver **valide** et à un `code_cim10` **présent au référentiel**. Un diagnostic orphelin gonflerait artificiellement la prévalence d'une pathologie. Sur ce jeu, les 127 rejets sont tous des diagnostics portés par l'un des 68 séjours écartés pour incohérence temporelle ; tous les codes CIM-10 observés sont au référentiel. Les codes conservés ici alimentent `silver.pathologies`.
+On garde tout diagnostic dont le `stay_id` existe **dans `bronze.sejours`** (séjour réel) et
+dont le `code_cim10` est **présent au référentiel** ; `patient_hash` est récupéré depuis
+`bronze.sejours`. On **ne** rejette **que** le diagnostic dont le `stay_id` est totalement
+inconnu (aucun cas ici) ou dont le code est hors nomenclature (aucun cas ici).
+
+**Choix clé (aligné sur la feuille de réponses officielle)** : un séjour écarté de
+`silver.sejours` pour `discharge_ts < admission_ts` a une erreur sur ses **dates**, pas sur
+son **codage** — le patient est réellement porteur de la pathologie. Les **127** diagnostics
+de ces 68 séjours sont donc **conservés** dans `silver.diagnostics` : ils comptent pour la
+prévalence et les cohortes de recherche (une prévalence épidémiologique ne doit pas perdre un
+patient à cause d'une coquille de saisie), mais restent **exclus de `gold.fact_sejour`**
+(durées, DMS) via l'`INNER JOIN silver.sejours`. Les codes observés alimentent
+`silver.pathologies`.
 
 ### Diagnostics → pathologies — le référentiel matérialisé dans le silver
 
@@ -191,15 +209,18 @@ Chaque couche fait `TRUNCATE` + `INSERT` depuis la couche amont — y compris `c
 ## 7. Indicateurs — définitions et chiffres justifiés
 
 Table de fait : `gold.fact_sejour`. Chaque chiffre est **reproductible** (`make verify`, § 10).
+Les définitions ci-dessous sont **alignées sur la feuille de réponses officielle des KPI**
+(« corrigé niveau 1 », jeu figé seed 42) — cf. `docs/context/09-corrige-niveau1-comparatif.md`
+pour le détail avant/après.
 
 ### Pilotage
 
 | KPI | Définition | Valeur (jeu fourni) |
 |---|---|---|
-| DMS par service | `avg(los_days)` sur séjours clos, `GROUP BY service_code` | de 2,2 j (Urgences) à 9,1 j (Réanimation) |
-| Passages urgences / jour | `countIf(admission_mode = 'urgence')` par jour | 3 327 au total, ≈ 119 / jour (18 à 158) ; les 3 derniers jours sont partiels |
-| Réadmission à 30 jours | part des sorties suivies d'une nouvelle admission du même `patient_hash` ≤ 30 j | **10,54 %** (637 / 6 046 sorties) |
-| Relevés en alerte / jour | relevés silver franchissant une borne d'alerte clinique (FC <40 ou >120, SpO2 <92, temp <35 ou >38,5) | ≈ 83 / jour (FC 277 · SpO2 1 127 · temp 1 082 sur la période) |
+| DMS par service | `avg(los_hours)/24` sur séjours **clos**, `GROUP BY service_code` (+ `dms_heures`) | de **2,15 j** (Urgences, 1 277 séjours) à **9,05 j** (Réanimation, 423) ; NEURO 7,06 · ONCO 6,87 · PNEUMO 6,20 · CARDIO 5,31 · CHIR 4,39 · PEDIA 3,19 |
+| Activité urgences / jour | séjours du **service `URGENCES`** par date d'admission : `nb_passages`, `nb_encore_presents`, `duree_moy_heures` (clos) | **1 423** passages sur 28 j (≈ 51 / jour, 9 à 82) ; durée moyenne ≈ **51,8 h** ; les 3 derniers jours sont partiels |
+| Réadmission à 30 jours | séjours clos suivis d'une **nouvelle admission du même `patient_hash` ≤ 30 j** ; dénominateur = **tous** les séjours valides | **11,59 %** (780 / 6 729) |
+| Relevés en alerte / jour | relevés `silver.monitoring` franchissant une borne d'alerte clinique : **SpO2 < 92 · FC < 50 ou > 100 · T° > 38,5** (au moins un seuil) | **3 314** alertes / **40 920** relevés = **8,1 %** (≈ 118 alertes / jour) |
 | Charge par service | admissions, séjours en cours, patients-jours cumulés | Cardiologie en tête (1 601 admissions, 7 749 patients-jours) |
 | Modes de sortie | répartition des `discharge_mode` (séjours clos) | domicile 50,3 % · transfert 16,7 % · mutation 16,5 % · décès 16,5 % |
 
@@ -207,23 +228,29 @@ Table de fait : `gold.fact_sejour`. Chaque chiffre est **reproductible** (`make 
 
 | KPI | Définition | Valeur |
 |---|---|---|
-| Prévalence par pathologie | `uniqExact(patient_hash)` par diagnostic principal, `HAVING ≥ 5` | N39 (infection urinaire) 847 · J18 (pneumopathie) 836 · E11 (diabète) 833 · F32 (dépression) 820 · K35 (appendicite) 799 — 11 pathologies diffusées |
-| Cohorte âge × sexe | nb patients par tranche d'âge × sexe, `HAVING ≥ 5` | 10 cellules (5 tranches × M/F), de 242 à 960 patients |
+| Prévalence par pathologie | `uniqExact(patient_hash)` par `code_cim10`, **tous diagnostics** (principal + associé), `HAVING ≥ 5` | N39 (infection urinaire) **2 234** · E11 (diabète) 2 177 · I50 (insuffisance cardiaque) 2 156 · J44 (BPCO) 1 775 · J18 850 — **11 pathologies** diffusées |
+| Cohorte pathologie × âge × sexe | `uniqExact(patient_hash)` par diagnostic **principal** × tranche d'âge **décennale** × sexe, `HAVING ≥ 5` | **89 cellules** diffusées (13 pathologies × tranches × M/F) |
 
-**k-anonymat en action** : `cim10.csv` inclut trois pathologies pédiatriques rares. Q90 (Trisomie 21, 3 patients) et E84 (Mucoviscidose, 4) ont une cohorte < 5 → **non diffusées** par la vue ; G12 (Amyotrophie spinale, 8) apparaît. Le seuil s'applique dans la vue, pas dans le code appelant.
+**k-anonymat en action** : `cim10.csv` inclut trois pathologies pédiatriques rares.
+E84 (Mucoviscidose, **4** patients) et Q90 (Trisomie 21, **3**) ont une cohorte < 5 → leurs
+lignes **n'apparaissent pas** dans les vues `gold.kpi_recherche_*` (`HAVING nb_patients >= 5`) ;
+G12 (Amyotrophie spinale, 8) apparaît. Le seuil s'applique dans la vue, pas dans le code
+appelant. La feuille de réponses (usage intervenant) montre ces effectifs masqués — ils sont
+reproduits, hors périmètre `ro_recherche`, dans le comparatif § 16.
 
 ### Justification des chiffres
 
-`make verify` exécute 8 contrôles de réconciliation qui **garantissent** ces valeurs :
+`make verify` exécute **9 contrôles** de réconciliation qui **garantissent** ces valeurs :
 
 - `count(gold.fact_sejour)` = `count(silver.sejours)` = 6 729 ;
 - tout `stay_id` de silver provient du bronze et n'a pas été écarté par ailleurs ;
 - `count(patients distincts bronze)` = `count(silver.patients)` = 6 000 ;
 - aucune cohorte recherche < 5 ;
 - aucun `los_hours` négatif, aucune incohérence temporelle résiduelle ;
-- `Σ passages_urgence (KPI)` = `countIf(is_urgence)` sur le fait ;
+- `Σ nb_passages (KPI urgences)` = `countIf(service_code = 'URGENCES')` sur le fait ;
 - aucune constante hors plage résiduelle en silver ;
-- tout `code_cim10` de `silver.diagnostics` est présent dans `silver.pathologies`, elle-même incluse dans le référentiel CIM-10.
+- tout `code_cim10` de `silver.diagnostics` est présent dans `silver.pathologies`, elle-même incluse dans le référentiel CIM-10 ;
+- **`09_corrige_niveau1`** : les repères de la feuille de réponses sont atteints (réadmission 780 / 6 729 ; prévalence N39 = 2 234, E11 = 2 177, I50 = 2 156 ; DMS REA 9,05 · NEURO 7,06 ; alertes 2026-08-01 = 25 / 351 ; urgences 2026-08-01 = 46).
 
 
 ## 8. Visualisations

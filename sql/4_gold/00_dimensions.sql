@@ -20,6 +20,10 @@ TRUNCATE TABLE gold.dim_cim10;
 INSERT INTO gold.dim_cim10 SELECT code_cim10, libelle FROM silver.pathologies;
 
 -- Patient enrichi : tranche d'âge (calculée sur l'année de naissance — minimisation)
+--   * Tranches DÉCENNALES (0-9 … 90-99 / 100+ / inconnu) — cf. feuille de réponses
+--     officielle des KPI (corrigé niveau 1).
+--   * Année de référence FIGÉE = année du dernier séjour observé (jeu « data figée »,
+--     seed 42) → âge reproductible, indépendant de la date d'exécution.
 CREATE TABLE IF NOT EXISTS gold.dim_patient
 (
     patient_hash String,
@@ -34,11 +38,13 @@ INSERT INTO gold.dim_patient
 SELECT
     patient_hash, sex, region_code,
     age,
-    multiIf(age IS NULL, 'inconnu',
-            age < 18, '0-17', age < 40, '18-39', age < 65, '40-64',
-            age < 80, '65-79', '80+') AS age_band
+    multiIf(age IS NULL,  'inconnu',
+            age < 10,  '0-9',   age < 20,  '10-19', age < 30,  '20-29',
+            age < 40,  '30-39', age < 50,  '40-49', age < 60,  '50-59',
+            age < 70,  '60-69', age < 80,  '70-79', age < 90,  '80-89',
+            age < 100, '90-99', '100+') AS age_band
 FROM (
     SELECT patient_hash, sex, region_code,
-           (toYear(now()) - birth_year) AS age
+           ((SELECT toYear(max(admission_ts)) FROM silver.sejours) - birth_year) AS age
     FROM silver.patients
 );

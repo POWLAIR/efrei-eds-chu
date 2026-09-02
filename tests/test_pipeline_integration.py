@@ -89,5 +89,5 @@ def test_kanonymat_vues_recherche():
     c = _ch()
     if _count(c, "gold.fact_sejour") == 0:
         pytest.skip("pipeline non exécuté")
-    assert _count(c, "gold.kpi_recherche_prevalence WHERE cohorte_patients < 5") == 0
+    assert _count(c, "gold.kpi_recherche_prevalence WHERE nb_patients < 5") == 0
     assert _count(c, "gold.kpi_recherche_cohorte_age_sexe WHERE nb_patients < 5") == 0
