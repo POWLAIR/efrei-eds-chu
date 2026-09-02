@@ -46,7 +46,7 @@ n'est vérifiée qu'à partir du silver._
   source dédupliquée en silver (`argMax(colonne, business_date) GROUP BY patient_hash`).
   Elle est extraite du chemin du fichier : `extract(_path, '(\d{4}-\d{2}-\d{2})')`.
 - **Référentiels déposés le premier jour uniquement** — `file('lake/referentiels/*/…')`
-  ne trouve les CSV que sous `2026-08-26/` ; les jours suivants sans dépôt ne sont
+  ne trouve les CSV que sous `2026-08-01/` ; les jours suivants sans dépôt ne sont
   pas une erreur. Ne pas s'attendre à les retrouver chaque jour.
 - **`diagnostics`** est la seule source à structure imbriquée : `JSONAsString` lit
   chaque objet du tableau racine tel quel, puis `ARRAY JOIN` aplati le sous-tableau
@@ -58,15 +58,16 @@ n'est vérifiée qu'à partir du silver._
 uv run eds transform --layer bronze     # rejoue uniquement cette couche
 ```
 
-Comptes attendus sur le jeu fourni (3 jours, 2026-08-26 → 28) :
+Comptes attendus sur le jeu fourni (28 jours d'activité, 2026-08-01 → 28 ; patients en
+3 instantanés 2026-08-26 → 28) :
 
 ```sql
-SELECT count() FROM bronze.patients;      -- 16 200  (4 800 + 5 400 + 6 000, versions empilées)
-SELECT count() FROM bronze.sejours;       -- 15 000  (5 000 / jour)
-SELECT count() FROM bronze.monitoring;    -- ~66 700 (Parquet, réparti sur les partitions jour)
-SELECT count() FROM bronze.diagnostics;   -- ~37 400 (15 000 principal + ~22 400 associe)
+SELECT count() FROM bronze.patients;      -- 18 000  (3 instantanés de 6 000, versions empilées)
+SELECT count() FROM bronze.sejours;       -- 6 797   (1 dépôt / séjour ; ~40 à 310 / jour)
+SELECT count() FROM bronze.monitoring;    -- 41 778  (Parquet, réparti sur les partitions jour)
+SELECT count() FROM bronze.diagnostics;   -- 12 720  (6 797 principal + 5 923 associe)
 SELECT count() FROM bronze.ref_services;  -- 8
-SELECT count() FROM bronze.ref_cim10;     -- 10
+SELECT count() FROM bronze.ref_cim10;     -- 13
 
 -- répartition des versions patients par date de dépôt
 SELECT business_date, count() FROM bronze.patients GROUP BY business_date ORDER BY business_date;

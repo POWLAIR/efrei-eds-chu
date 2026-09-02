@@ -28,5 +28,7 @@ jointures historiques** → à sauvegarder hors dépôt.
 
 - Les identifiants réels ne sont lus qu'**en transit**, en mémoire, le temps de hacher —
   ils ne sont jamais écrits sur disque dans le lake ni dans ClickHouse.
-- Le filestorage source (identité en clair) reste hors périmètre de l'entrepôt et
-  n'est pas versionné (`.gitignore`).
+- Le jeu `data/source-filestorage/` est **100 % synthétique** (noms/NIR fabriqués) : il
+  est **versionné** pour que l'intervenant exécute le pipeline sans import. En
+  conditions réelles, ce dépôt (identité en clair) resterait hors Git et hors
+  périmètre de l'entrepôt ; seul `data/lake/` (pseudonymisé) est déjà `.gitignore`.

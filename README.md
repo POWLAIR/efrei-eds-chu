@@ -25,7 +25,6 @@ Doc d'exploitation & reprise sur incident : [`.claude/skills/eds-run/SKILL.md`](
 ```bash
 cp .env.example .env      # puis renseigner PSEUDO_SALT (secret)
 make install              # dépendances Python
-make seed                 # dézippe docs/eds-chu-sujet.zip -> data/source-filestorage/
 make up                   # ClickHouse (:8123/play) + Metabase (:3000)
 make init-db              # bases médaillon + meta + users RBAC
 make ingest               # filestorage -> lake (pseudonymisé, incrémental)
@@ -34,6 +33,9 @@ make verify               # 8 contrôles de fiabilité (réconciliation KPI, k-a
 make dashboards           # provisionne Metabase : connexions, groupes, 2 dashboards
 make report               # génère report/dossier.pdf (+ schémas)
 ```
+
+> Le jeu source (`data/source-filestorage/`, 28 jours — 2026-08-01 → 28) est **versionné**
+> dans le dépôt : données 100 % fictives, aucun import à faire.
 
 Ou tout enchaîner : `make all`.
 
@@ -52,7 +54,8 @@ Les mots de passe par défaut sont dans [`.env.example`](.env.example) ; `PSEUDO
 
 | Commande | Effet |
 |---|---|
-| `make ingest DATE=2026-08-27` | ingère une date précise (incrémental) |
+| `make ingest` | ingère toutes les dates présentes dans `data/source-filestorage/` (incrémental) |
+| `make ingest DATE=2026-08-27` | ingère une seule date |
 | `make transform` | rejoue toutes les transformations SQL (bronze → clean → silver → gold) |
 | `uv run eds run-daily` | traitement quotidien complet (ingest + transform + verify) dans un seul run tracé |
 | `make replay DATE=2026-08-27` | **reprise sur incident** : ré-ingère + rejoue une date |
@@ -77,12 +80,13 @@ Le pipeline est **incrémental et idempotent** :
 ## Structure
 
 ```
-docs/context/     notes de contexte tirées des PDF/zip du sujet
+docs/context/     notes de contexte tirées des PDF du sujet
+data/             source-filestorage/ (jeu synthétique versionné) ; lake/ (dérivé, gitignoré)
 pipeline/         CLI `eds` (cli.py) + plomberie (config, clickhouse, observabilite)
 pipeline/steps/   les 4 étapes, numérotées : 1_lake, 2_medallion, 3_verify, 4_dashboards
 sql/              0_init/ · 1_bronze/ · 2_clean/ · 3_silver/ · 4_gold/ · 5_checks/
 dashboards/       README (provisioning Metabase) + captures du cloisonnement
-scripts/          seed_filestorage.sh, crontab.example
+scripts/          crontab.example
 report/           dossier.md + generate_pdf.py ; schemas/ (mermaid → PNG) → dossier.pdf
 tests/            pytest (unitaires + intégration)
 ```

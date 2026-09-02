@@ -4,8 +4,8 @@ Dossier d'architecture et de traitements — pipeline ELT médaillon sur ClickHo
 
 ```kpi
 Sources | 6
-Jours ingérés | 3
-Séjours fiables | 14 864
+Jours ingérés | 28
+Séjours fiables | 6 729
 Patients | 6 000
 Contrôles verify | 8/8
 ```
@@ -23,18 +23,18 @@ Les données de santé relèvent d'une **catégorie particulière** (RGPD, art. 
 
 ## 2. Les sources
 
-Le CHU dépose chaque jour ses fichiers dans `source-filestorage/<source>/<AAAA-MM-JJ>/`, en **lecture seule**. Volumétries constatées sur les 3 jours fournis (2026-08-26 à 28) :
+Le CHU dépose chaque jour ses fichiers dans `source-filestorage/<source>/<AAAA-MM-JJ>/`, en **lecture seule**. Volumétries constatées sur le jeu fourni : **28 jours** d'activité (2026-08-01 à 28) pour les séjours, diagnostics et monitoring ; les `patients` sont livrés en **3 instantanés complets** (2026-08-26 à 28).
 
 | Fichier | Format | Volumétrie | Particularité |
 |---|---|---|---|
-| `patients.csv` | CSV | 4 801 / 5 401 / 6 001 lignes | contient l'identité réelle (NIR, nom, prénom) — à pseudonymiser |
-| `sejours.csv` | CSV | 5 001 lignes / jour | `discharge_ts` parfois vide = séjour en cours |
-| `diagnostics.json` | JSON imbriqué | ~1 Mo / jour | un ou plusieurs codes CIM-10 par séjour (`principal` / `associe`) |
-| `monitoring.parquet` | Parquet | flux volumineux | constantes au chevet (FC, SpO2, température) |
-| `referentiels/services.csv` | CSV | 8 services | déposé **le premier jour uniquement** |
-| `referentiels/cim10.csv` | CSV | 10 codes | idem |
+| `patients.csv` | CSV | 6 000 lignes × 3 instantanés | contient l'identité réelle (NIR, nom, prénom) — à pseudonymiser |
+| `sejours.csv` | CSV | 6 797 séjours (≈ 40 à 310 / jour) | `discharge_ts` parfois vide = séjour en cours |
+| `diagnostics.json` | JSON imbriqué | ~40 Ko / jour | un ou plusieurs codes CIM-10 par séjour (`principal` / `associe`) |
+| `monitoring.parquet` | Parquet | 41 778 relevés (flux volumineux par nature) | constantes au chevet (FC, SpO2, température) |
+| `referentiels/services.csv` | CSV | 8 services | déposé **le premier jour uniquement** (2026-08-01) |
+| `referentiels/cim10.csv` | CSV | 13 codes | idem |
 
-Le même patient revient d'un jour à l'autre (retour quotidien du dossier) : 16 200 lignes `patients` brutes correspondent à **6 000 patients distincts**.
+Les `patients` sont livrés en instantané complet : 18 000 lignes brutes (3 × 6 000) correspondent à **6 000 patients distincts**, dédupliqués en silver.
 
 
 ## 3. Architecture cible — schéma justifié
@@ -107,12 +107,12 @@ Principe imposé par le sujet : le traitement attendu est **simple** — on **é
 
 | Source | Règle | Lignes écartées |
 |---|---|---|
-| monitoring | valeur hors plage physiologique (FC 20-250, SpO2 50-100, temp 30-45) | 1 369 |
-| diagnostics | diagnostic rattaché à un séjour inconnu / écarté | 340 |
-| sejours | `discharge_ts < admission_ts` (incohérence temporelle) | 136 |
-| patients | sexe non normalisable · `birth_year` aberrant · durée > 180 j · service hors référentiel | 0 (aucun cas sur ce jeu) |
+| monitoring | valeur hors plage physiologique (FC 20-250, SpO2 50-100, temp 30-45) | 858 |
+| diagnostics | diagnostic rattaché à un séjour écarté en silver | 127 |
+| sejours | `discharge_ts < admission_ts` (incohérence temporelle) | 68 |
+| sejours / patients | `birth_year` aberrant · durée > 180 j · service hors référentiel · sexe non normalisable · `code_cim10` hors référentiel | 0 (aucun cas sur ce jeu) |
 
-Bilan : **15 000** séjours bruts → **14 864** séjours fiables (99,1 %). **16 200** lignes patients → **6 000** patients (déduplication). Le fait `gold.fact_sejour` compte exactement 14 864 lignes (cf. contrôle de réconciliation, § 7).
+Bilan : **6 797** séjours bruts → **6 729** séjours fiables (99,0 %). **18 000** lignes patients (3 instantanés) → **6 000** patients (déduplication). Le fait `gold.fact_sejour` compte exactement 6 729 lignes (cf. contrôle de réconciliation, § 7).
 
 
 ## 5. Couche silver — modèle propre & décisions de nettoyage
@@ -143,9 +143,9 @@ Le sujet l'impose. Implémentation : `argMax(colonne, business_date) GROUP BY pa
 - **Pourquoi `business_date`** (date du dépôt) et non l'horodatage technique d'ingestion : la date métier est la vérité ; l'horodatage technique peut varier selon l'ordre de traitement.
 - **Pourquoi fusionner et non empiler les versions** : un patient est une **entité unique** dans l'entrepôt ; la jointure séjour → patient doit être 1-1, sinon les comptages de cohortes seraient faux.
 
-### Séjours — écarter `discharge_ts < admission_ts` (136 lignes)
+### Séjours — écarter `discharge_ts < admission_ts` (68 lignes)
 
-On ne peut pas savoir **laquelle** des deux dates est fausse. Corriger serait arbitraire (et introduirait une donnée inventée, contraire à l'esprit RGPD). **Écarter + tracer** est auditable : 136 lignes, soit 2,7 % — impact quantifié et acceptable.
+On ne peut pas savoir **laquelle** des deux dates est fausse. Corriger serait arbitraire (et introduirait une donnée inventée, contraire à l'esprit RGPD). **Écarter + tracer** est auditable : 68 lignes, soit 1,0 % — impact quantifié et acceptable.
 
 ### Séjours — conserver `discharge_ts` NULL
 
@@ -157,11 +157,11 @@ Décision : dès qu'**une** constante renseignée est hors borne, on écarte **t
 
 ### Monitoring — flux autonome (pas de contrainte de séjour)
 
-Le monitoring est un **flux de faits volumineux** (constantes au chevet) traité **indépendamment** de `silver.sejours` : la table n'est reliée à rien. Un relevé dont le `stay_id` est absent de `silver.sejours` (séjour écarté, ou identifiant erroné) est **conservé** — c'est de la télémétrie réelle, et aucun KPI ne joint monitoring aux séjours (`kpi_pilotage_alertes_constantes` agrège par jour). Le refuser reviendrait à jeter des mesures physiologiques valides. Le taux d'orphelins est en revanche un **signal de qualité à remonter au CHU** (§ 11). Seules les bornes physiologiques restent appliquées.
+Le monitoring est un **flux de faits volumineux** (constantes au chevet) traité **indépendamment** de `silver.sejours` : la table n'est reliée à rien. Sur ce jeu, tous les `stay_id` du monitoring existent bien dans les séjours bruts, mais **520 relevés (1,3 %)** portent sur un séjour **écarté par un contrôle qualité silver** : ils sont **conservés** — c'est de la télémétrie réelle, et aucun KPI ne joint monitoring aux séjours (`kpi_pilotage_alertes_constantes` agrège par jour). Le refuser reviendrait à jeter des mesures physiologiques valides. Ce taux de rattachement partiel reste un **signal de qualité à remonter au CHU** (§ 11). Seules les bornes physiologiques restent appliquées.
 
-### Diagnostics — jointure stricte (340 rejets)
+### Diagnostics — jointure stricte (127 rejets)
 
-On ne garde que les diagnostics rattachés à un séjour silver **valide** et à un `code_cim10` **présent au référentiel**. Un diagnostic orphelin gonflerait artificiellement la prévalence d'une pathologie. Les codes conservés ici alimentent `silver.pathologies`.
+On ne garde que les diagnostics rattachés à un séjour silver **valide** et à un `code_cim10` **présent au référentiel**. Un diagnostic orphelin gonflerait artificiellement la prévalence d'une pathologie. Sur ce jeu, les 127 rejets sont tous des diagnostics portés par l'un des 68 séjours écartés pour incohérence temporelle ; tous les codes CIM-10 observés sont au référentiel. Les codes conservés ici alimentent `silver.pathologies`.
 
 ### Diagnostics → pathologies — le référentiel matérialisé dans le silver
 
@@ -196,25 +196,27 @@ Table de fait : `gold.fact_sejour`. Chaque chiffre est **reproductible** (`make 
 
 | KPI | Définition | Valeur (jeu fourni) |
 |---|---|---|
-| DMS par service | `avg(los_days)` sur séjours clos, `GROUP BY service_code` | 6,0 à 6,2 jours selon le service |
-| Passages urgences / jour | `countIf(admission_mode = 'urgence')` par jour | ≈ 1 676 / 1 721 / 1 627 |
-| Réadmission à 30 jours | part des sorties suivies d'une nouvelle admission du même `patient_hash` ≤ 30 j | **5,34 %** |
-| Relevés en alerte / jour | relevés silver franchissant une borne d'alerte clinique (FC <40 ou >120, SpO2 <92, temp <35 ou >38,5) | quelques centaines / jour |
-| Charge par service | admissions, séjours en cours, patients-jours cumulés | ONCO en tête (1 940 admissions) |
-| Modes de sortie | répartition des `discharge_mode` (séjours clos) | domicile 42,5 % · décès 14,6 % · non renseigné 14,4 % |
+| DMS par service | `avg(los_days)` sur séjours clos, `GROUP BY service_code` | de 2,2 j (Urgences) à 9,1 j (Réanimation) |
+| Passages urgences / jour | `countIf(admission_mode = 'urgence')` par jour | 3 327 au total, ≈ 119 / jour (18 à 158) ; les 3 derniers jours sont partiels |
+| Réadmission à 30 jours | part des sorties suivies d'une nouvelle admission du même `patient_hash` ≤ 30 j | **10,54 %** (637 / 6 046 sorties) |
+| Relevés en alerte / jour | relevés silver franchissant une borne d'alerte clinique (FC <40 ou >120, SpO2 <92, temp <35 ou >38,5) | ≈ 83 / jour (FC 277 · SpO2 1 127 · temp 1 082 sur la période) |
+| Charge par service | admissions, séjours en cours, patients-jours cumulés | Cardiologie en tête (1 601 admissions, 7 749 patients-jours) |
+| Modes de sortie | répartition des `discharge_mode` (séjours clos) | domicile 50,3 % · transfert 16,7 % · mutation 16,5 % · décès 16,5 % |
 
 ### Recherche (k-anonymat : cohortes < 5 non diffusées)
 
 | KPI | Définition | Valeur |
 |---|---|---|
-| Prévalence par pathologie | `uniqExact(patient_hash)` par diagnostic principal, `HAVING ≥ 5` | I63 (AVC) 1 344 · J44 (BPCO) 1 327 · N39 1 325 · I21 (IDM) 1 320 · E11 (diabète) 1 316 |
-| Cohorte âge × sexe | nb patients par tranche d'âge × sexe, `HAVING ≥ 5` | réparti sur 5 tranches, ~370 à ~740 par cellule |
+| Prévalence par pathologie | `uniqExact(patient_hash)` par diagnostic principal, `HAVING ≥ 5` | N39 (infection urinaire) 847 · J18 (pneumopathie) 836 · E11 (diabète) 833 · F32 (dépression) 820 · K35 (appendicite) 799 — 11 pathologies diffusées |
+| Cohorte âge × sexe | nb patients par tranche d'âge × sexe, `HAVING ≥ 5` | 10 cellules (5 tranches × M/F), de 242 à 960 patients |
+
+**k-anonymat en action** : `cim10.csv` inclut trois pathologies pédiatriques rares. Q90 (Trisomie 21, 3 patients) et E84 (Mucoviscidose, 4) ont une cohorte < 5 → **non diffusées** par la vue ; G12 (Amyotrophie spinale, 8) apparaît. Le seuil s'applique dans la vue, pas dans le code appelant.
 
 ### Justification des chiffres
 
 `make verify` exécute 8 contrôles de réconciliation qui **garantissent** ces valeurs :
 
-- `count(gold.fact_sejour)` = `count(silver.sejours)` = 14 864 ;
+- `count(gold.fact_sejour)` = `count(silver.sejours)` = 6 729 ;
 - tout `stay_id` de silver provient du bronze et n'a pas été écarté par ailleurs ;
 - `count(patients distincts bronze)` = `count(silver.patients)` = 6 000 ;
 - aucune cohorte recherche < 5 ;
@@ -260,7 +262,7 @@ Le cloisonnement est porté à **deux niveaux**, le second étant la vraie garan
 | Traçabilité | `meta.runs` (qui, quand, quel statut) + `meta.ingested_files` (hash de chaque fichier) + logs horodatés ; `clean.rejects` journalise chaque ligne écartée (source, règle, clé) |
 | Sécurité du sel | `PSEUDO_SALT` dans `.env` (jamais committé) ; sa perte casse les jointures historiques → sauvegarde hors dépôt |
 
-> Le jeu de données utilisé ici est **synthétique** (fourni avec le sujet : noms et NIR fabriqués). En conditions réelles, le dépôt `source-filestorage` — qui contient l'identité en clair le temps du hachage — resterait **hors du dépôt Git** et hors périmètre de l'entrepôt.
+> Le jeu de données utilisé ici est **100 % synthétique** (fourni avec le sujet : noms et NIR fabriqués). Il est **versionné dans le dépôt** (`data/source-filestorage/`) pour que le pipeline s'exécute tel quel, sans import. En conditions réelles, ce dépôt — qui contient l'identité en clair le temps du hachage — resterait **hors du dépôt Git** et hors périmètre de l'entrepôt ; seul `data/lake/` (pseudonymisé) et l'entrepôt subsisteraient.
 
 ## 10. Automatisation (Partie 2)
 
@@ -288,7 +290,7 @@ Le flux monitoring est le plus volumineux et grossira. Le traiter comme un **flu
 ### Qualité & sécurité
 
 - Étendre les contrôles silver (doublons de `stay_id` divergents entre dépôts, valeurs de `admission_mode` / `discharge_mode` hors nomenclature).
-- `silver.monitoring` (flux autonome) contient des relevés dont le `stay_id` n'existe dans aucun séjour : **conservés** (télémétrie réelle), mais leur taux est à **remonter au CHU** comme anomalie de rattachement à la source — même logique que le `discharge_mode` non renseigné.
+- `silver.monitoring` (flux autonome) conserve **520 relevés (1,3 %)** portant sur un séjour écarté par un contrôle qualité silver : **conservés** (télémétrie réelle), mais ce taux de rattachement partiel est à **remonter au CHU** comme signal de qualité à la source.
 - Le référentiel `services` n'est pas (encore) matérialisé en silver comme `pathologies` : le retour portait sur la chaîne des diagnostics. Le promouvoir en `silver.services` rendrait la chaîne pleinement symétrique.
 - Chiffrement au repos des volumes, journalisation des accès Metabase, rotation du sel de pseudonymisation avec table de correspondance sécurisée.
-- Le champ `discharge_mode` est non renseigné sur ~14 % des séjours clos : à remonter au CHU comme problème **à la source**.
+- Sur ce jeu, `discharge_mode` est renseigné sur tous les séjours clos ; sur un dépôt réel, un taux de non-renseignement serait à suivre comme problème **à la source**.

@@ -43,8 +43,8 @@ Deux niveaux, le second étant la vraie garantie :
 |---|---|
 | `01-cloisonnement-recherche.png` | connecté en `chercheur@chu.local` : seules la base **EDS — Recherche** et la collection **Recherche** sont visibles |
 | `02-rbac-clickhouse-denied.png` | `chercheur` lance `SELECT * FROM gold.kpi_pilotage_dms` sur la connexion Recherche → `ro_recherche: Not enough privileges … ACCESS_DENIED` |
-| `03-dashboard-pilotage.png` | dashboard Pilotage (DMS, urgences/j, réadmission 30 j = 5,34 %, alertes constantes, charge par service, modes de sortie) |
-| `04-dashboard-recherche.png` | dashboard Recherche (prévalence par pathologie, cohorte âge × sexe) |
+| `03-dashboard-pilotage.png` | dashboard Pilotage (DMS 2,2 à 9,1 j, urgences/j, réadmission 30 j = 10,54 %, alertes constantes, charge par service, modes de sortie) |
+| `04-dashboard-recherche.png` | dashboard Recherche (prévalence par pathologie — 11 diffusées, Q90/E84 masqués k<5 —, cohorte âge × sexe) |
 
 ## Voie manuelle (repli, si l'API bloque)
 

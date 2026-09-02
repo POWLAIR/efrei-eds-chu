@@ -20,26 +20,27 @@ L'étape `clean` ne contient que le journal de quarantaine `clean.rejects` (lign
 ## Exécution nominale (dépôt quotidien)
 
 ```bash
-make seed                       # une seule fois : dézippe le dépôt CHU
 uv run eds run-daily            # ingest(jour) + transform + verify, dans UN seul meta.runs
 make status                     # vérifier meta.runs : dernier run = success
 ```
 
-`run-daily` est ce que le cron exécute. Pour une date précise : `uv run eds run-daily --date 2026-08-27`.
+Le jeu source (`data/source-filestorage/`, 2026-08-01 → 28) est **versionné** : aucun
+`make seed` à lancer. `run-daily` est ce que le cron exécute. Pour une date précise :
+`uv run eds run-daily --date 2026-08-27`.
 Étapes séparées si besoin : `make ingest DATE=…`, `make transform`, `make verify`.
-Plusieurs jours : `uv run eds ingest --date 2026-08-26 --date 2026-08-27 --date 2026-08-28`.
+Tous les jours d'un coup : `make ingest` (la variable `DATES` liste l'arbo automatiquement).
 
-Chaîne complète à froid : `make all` (seed + up + init-db + ingest + transform + verify + dashboards).
+Chaîne complète à froid : `make all` (up + init-db + ingest + transform + verify + dashboards).
 
 ## Vérifications rapides (SQL, via `:8123/play` ou `uv run eds`)
 
 ```sql
-SELECT count() FROM bronze.patients;                    -- 16200 sur les 3 jours
+SELECT count() FROM bronze.patients;                    -- 18000 (3 instantanés de 6000)
 SELECT count() FROM silver.patients;                    -- 6000 (déduplication)
-SELECT count() FROM silver.sejours;                     -- 14864 (= gold.fact_sejour)
-SELECT count() FROM silver.pathologies;                 -- codes CIM-10 observés en diagnostics
-SELECT source, rule, count() FROM clean.rejects GROUP BY 1,2 ORDER BY 3 DESC;
-SELECT * FROM gold.kpi_recherche_prevalence;            -- aucune cohorte < 5
+SELECT count() FROM silver.sejours;                     -- 6729 (= gold.fact_sejour ; 68 écartés)
+SELECT count() FROM silver.pathologies;                 -- 13 codes CIM-10 observés en diagnostics
+SELECT source, rule, count() FROM clean.rejects GROUP BY 1,2 ORDER BY 3 DESC;  -- monitoring 858 · diagnostics 127 · sejours 68
+SELECT * FROM gold.kpi_recherche_prevalence;            -- 11 lignes (Q90/E84 masqués : cohorte < 5)
 ```
 
 Ou, plus simple : `make verify` — 8 contrôles de réconciliation, exit ≠ 0 si un chiffre ne colle pas.
@@ -71,7 +72,8 @@ et le run est marqué `error` dans `meta.runs`. Surveillance : `grep ALERTE logs
 
 ## Points d'attention
 
-- **Ne jamais** committer `data/lake/`, `data/source-filestorage/`, `.env` (déjà dans `.gitignore`).
+- **Ne jamais** committer `data/lake/` ni `.env` (déjà dans `.gitignore`). `data/source-filestorage/`
+  **est** versionné : jeu 100 % synthétique, pour exécuter le pipeline sans import.
 - La perte de `PSEUDO_SALT` casse toutes les jointures patient historiques → le sauvegarder hors dépôt.
 - Les référentiels (`services`, `cim10`) ne sont déposés que le **premier jour** : ne pas
   traiter leur absence les jours suivants comme une erreur.

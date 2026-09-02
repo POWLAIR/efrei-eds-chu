@@ -1,7 +1,8 @@
 # 00 · Synthèse du sujet — EDS du CHU
 
 > Source : `docs/FICHE-SUJET.pdf` (épreuve **Big Data M2 · E05**) + `docs/SLIDES-THEORIE.pdf`.
-> Données : `docs/eds-chu-sujet.zip` → `data/source-filestorage/` (via `make seed`).
+> Données : jeu synthétique **versionné** dans `data/source-filestorage/` (le pipeline
+> s'exécute sans import — cf. `03-contraintes-rgpd.md`).
 
 ## Contexte métier
 
