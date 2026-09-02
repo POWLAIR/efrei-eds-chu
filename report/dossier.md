@@ -40,7 +40,7 @@ Le CHU dépose chaque jour ses fichiers dans `source-filestorage/<source>/<AAAA-
 
 Les `patients` sont livrés en instantané complet : 18 000 lignes brutes (3 × 6 000) correspondent à **6 000 patients distincts**, dédupliqués en silver.
 
-> L'évolution du sujet ajoute une **6ᵉ source** (`actes/`, Parquet) et deux référentiels
+> L'évolution du sujet ajoute une **6e source** (`actes/`, Parquet) et deux référentiels
 > (`description_service.csv`, `ccam.csv`) dans le dépôt du **2026-08-29** — détail § 12.
 
 
@@ -442,9 +442,9 @@ Vues `gold.kpi_pilotage_*`, `SQL SECURITY DEFINER`, `GRANT SELECT … TO role_pi
 | **E4 · Densité d'actes par lit** | `count(actes) / capacite_lits` par service | URGENCES **86,6** · CARDIO 64,5 · PNEUMO 36,0 · REA 35,2 · … · **NEURO = NULL** (service non décrit) |
 | **E5 · Montant T2A par service** | `sum(tarif_euros)` par service | CARDIO **521 655 €** · URGENCES 478 585 € · NEURO 393 850 € · … · ONCO 64 265 € (total ≈ 2,20 M€) |
 
-### Restitution — 3ᵉ dashboard Metabase
+### Restitution — 3e dashboard Metabase
 
-`make dashboards` provisionne un **3ᵉ dashboard** *« Pilotage — plateau technique & T2A »*
+`make dashboards` provisionne un **3e dashboard** *« Pilotage — plateau technique & T2A »*
 (5 cartes, collection Pilotage), à côté des 2 dashboards de la Partie I qui restent
 intacts. Cloisonnement inchangé : `ro_recherche` sur ces vues → `ACCESS_DENIED`.
 
