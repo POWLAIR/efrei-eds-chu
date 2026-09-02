@@ -34,9 +34,11 @@
 
 - [x] Le dépôt Git contient le code du pipeline (ingestion → transfos) + SQL versionné
       (`sql/` : `0_init/`, `1_bronze/`, `2_clean/`, `3_silver/`, `4_gold/`, `5_checks/`)
+      **+ le jeu synthétique** `data/source-filestorage/` (exécutable sans import)
 - [x] Les dashboards sont documentés et reproductibles (`dashboards/README.md` + captures)
 - [x] `README.md` : comment lancer & rejouer
-- [x] `make all` fonctionne à froid (seed + up + init-db + ingest + transform + verify + dashboards)
+- [x] `make all` fonctionne à froid (up + init-db + ingest + transform + verify + dashboards)
 - [x] `uv run pytest` au vert (12 tests)
 - [x] Le rapport PDF + les schémas (PNG) sont dans `report/`
-- [ ] **Premier commit Git** (`.env` non committé ; hors jeu synthétique du sujet, aucune donnée patient — `.gitignore` OK)
+- [x] **Premier commit Git** (`.env` et `data/lake/` non committés — `.gitignore` OK ;
+      jeu source synthétique versionné volontairement)

@@ -2,7 +2,10 @@
 
 > Le CHU dépose chaque jour ses fichiers dans `source-filestorage/<source>/<AAAA-MM-JJ>/`.
 > **Accès en lecture seule** : on recopie vers notre lake avant traitement.
-> Volumétries ci-dessous = **constatées** dans `docs/eds-chu-sujet.zip` (3 jours : 2026-08-26/27/28).
+> Volumétries ci-dessous = **constatées** dans `data/source-filestorage/` : 28 jours
+> d'activité (2026-08-01 → 28) pour `sejours` / `diagnostics` / `monitoring` ;
+> `patients` en 3 instantanés complets (2026-08-26/27/28) ; `referentiels` déposés le
+> 1ᵉʳ jour (2026-08-01).
 
 ```
 source-filestorage/
@@ -25,10 +28,11 @@ source-filestorage/
 | `sex` | texte | M / F | conservé, normalisé en silver |
 | `region_code` | texte | département de résidence | conservé (utile cohortes, non directement identifiant) |
 
-Volumétrie : **4801 / 5401 / 6001** lignes. Le même patient revient d'un jour à l'autre
-→ **déduplication** en silver, on garde la version la plus récente.
+Volumétrie : **6 000 lignes** par instantané (3 instantanés → 18 000 lignes brutes).
+Le même patient est présent dans chaque instantané → **déduplication** en silver, on
+garde la version la plus récente (6 000 patients distincts).
 
-Exemple brut : `IPP0000000,133129422914332,THOMAS,Manon,1933-12-09,M,94`
+Exemple brut : `IPP0000000,117049375510508,FOURNIER,Pierre,2019-04-07,M,93`
 
 ## sejours.csv — un séjour = un passage à l'hôpital
 
@@ -42,7 +46,8 @@ Exemple brut : `IPP0000000,133129422914332,THOMAS,Manon,1933-12-09,M,94`
 | `admission_mode` | texte | `urgence`, `programme`, `mutation` |
 | `discharge_mode` | texte | `domicile`, `mutation`, `transfert`, `deces`… |
 
-Volumétrie : **5001** lignes/jour. Exemple : `S00000001,IPP0002155,PEDIA,2026-08-26 17:50:00,2026-09-04 19:50:00,mutation,domicile`
+Volumétrie : **6 797 séjours** au total sur 28 jours (≈ 40 à 310/jour ; les 3 derniers
+jours sont partiels). Exemple : `S00000017,IPP0000016,CARDIO,2026-08-01 06:23:00,2026-08-07 13:23:00,mutation,domicile`
 
 ## diagnostics.json — structure imbriquée (un ou plusieurs codes par séjour)
 
@@ -51,7 +56,7 @@ Volumétrie : **5001** lignes/jour. Exemple : `S00000001,IPP0002155,PEDIA,2026-0
     "diagnostics": [ { "code_cim10": "...", "type": "principal" },
                      { "code_cim10": "...", "type": "associe" } ] } ]
 ```
-`type` ∈ { `principal`, `associe` }. ~1 Mo/jour.
+`type` ∈ { `principal`, `associe` }. ~40 Ko/jour ; 12 720 lignes au total (6 797 `principal` + 5 923 `associe`).
 
 ## monitoring.parquet — flux volumineux (constantes au chevet)
 
@@ -63,13 +68,13 @@ Volumétrie : **5001** lignes/jour. Exemple : `S00000001,IPP0002155,PEDIA,2026-0
 | `spo2` | entier (%) |
 | `temp_c` | décimal (°C) |
 
-~100 Ko/jour compressé ici, mais **c'est le flux qui grossit** : l'architecture doit tenir
-la charge (colonne + partitionnement par jour).
+~15-25 Ko/jour compressé ici (41 778 relevés au total), mais **c'est le flux qui
+grossit** : l'architecture doit tenir la charge (colonne + partitionnement par jour).
 
 ## referentiels/ — nomenclatures
 
-- `services.csv` : `service_code → service_label` (ex. `CARDIO,Cardiologie`)
-- `cim10.csv` : `code_cim10 → libelle` (ex. `I21,Infarctus aigu du myocarde`)
+- `services.csv` : `service_code → service_label` (ex. `CARDIO,Cardiologie`) — **8 services**
+- `cim10.csv` : `code_cim10 → libelle` (ex. `I21,Infarctus aigu du myocarde`) — **13 codes**
 
-Déposés **le premier jour uniquement** → l'ingestion ne doit pas s'attendre à les
-retrouver chaque jour.
+Déposés **le premier jour uniquement** (2026-08-01) → l'ingestion ne doit pas s'attendre
+à les retrouver chaque jour.

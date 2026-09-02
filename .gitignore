@@ -1,6 +1,9 @@
-# Données (jamais versionnées — RGPD + volumétrie)
-/data/
-*.parquet
+# Données dérivées — jamais versionnées (dépend du sel, volumétrie)
+/data/lake/
+/data/_work/
+/data/*.zip
+# data/source-filestorage/ EST versionné : jeu 100 % synthétique du sujet, pour que
+# l'intervenant exécute le pipeline sans import (cf. dossier § 9).
 
 # Secrets & env
 .env

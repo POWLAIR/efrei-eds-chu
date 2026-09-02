@@ -2,7 +2,9 @@
 # Usage : make <cible>   (voir `make help`)
 
 SHELL := /bin/bash
-DATES ?= 2026-08-26 2026-08-27 2026-08-28
+# Dates de dépôt à ingérer : découvertes depuis l'arbo versionnée (data/source-filestorage/
+# est committé — jeu synthétique). Override possible : make ingest DATES="2026-08-01 ..."
+DATES ?= $(shell ls data/source-filestorage/sejours 2>/dev/null)
 RUN   := uv run eds
 
 .DEFAULT_GOAL := help
@@ -15,10 +17,6 @@ help: ## Liste les cibles
 .PHONY: install
 install: ## Installe les dépendances Python (uv)
 	uv sync --extra dev
-
-.PHONY: seed
-seed: ## Dézippe le dépôt CHU dans data/source-filestorage/
-	bash scripts/seed_filestorage.sh
 
 .PHONY: up
 up: ## Démarre ClickHouse + Metabase (attend que ClickHouse soit prêt)
@@ -54,7 +52,7 @@ transform: ## Rejoue bronze -> silver -> gold (SQL dans ClickHouse)
 	$(RUN) transform
 
 .PHONY: all
-all: seed up init-db ## Chaîne complète : seed + up + init-db + ingest + transform + verify + dashboards
+all: up init-db ## Chaîne complète : up + init-db + ingest + transform + verify + dashboards
 	$(RUN) ingest $(foreach d,$(DATES),--date $(d))
 	$(RUN) transform
 	$(RUN) verify
