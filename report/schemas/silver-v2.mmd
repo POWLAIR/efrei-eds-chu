@@ -1,0 +1,64 @@
+erDiagram
+    patients    ||--o{ sejours     : "patient_hash"
+    patients    ||--o{ diagnostics : "patient_hash"
+    sejours     ||--o{ diagnostics : "stay_id"
+    pathologies ||--o{ diagnostics : "code_cim10"
+    services    ||--o{ sejours     : "service_code"
+    sejours     ||--o{ actes       : "stay_id (porte le service)"
+    patients    ||--o{ actes       : "patient_hash"
+    ccam        ||--o{ actes       : "code_ccam"
+
+    patients {
+        String patient_hash PK "pseudonyme SHA-256 salé"
+        UInt16 birth_year "nullable"
+        String sex "M | F | vide"
+        String region_code "département"
+    }
+    sejours {
+        String stay_id PK
+        String patient_hash FK
+        String service_code FK "présent au référentiel services"
+        DateTime admission_ts "non NULL"
+        DateTime discharge_ts "nullable — NULL = séjour en cours"
+        String admission_mode "urgence | programme | mutation"
+        String discharge_mode "domicile | mutation | transfert | deces"
+        Float64 los_hours "durée — NULL si en cours"
+    }
+    diagnostics {
+        String stay_id FK "séjour réel — conservé même si dates incohérentes"
+        String patient_hash FK
+        String code_cim10 FK
+        String type "principal | associe"
+    }
+    pathologies {
+        String code_cim10 PK "codes CIM-10 observés en diagnostics"
+        String libelle
+    }
+    monitoring {
+        String stay_id "flux autonome, non contraint"
+        DateTime ts "PARTITION BY jour"
+        Int32 heart_rate "nullable"
+        Int32 spo2 "nullable"
+        Float32 temp_c "nullable"
+    }
+    services {
+        String service_code PK "8 services (bronze.ref_services = liste autoritaire)"
+        String service_label "1 par service"
+        String categorie "regroupe des services — '(non décrit)' si absent de la description"
+        UInt16 capacite_lits "nullable — NULL si service non décrit"
+        String pole "regroupe des catégories"
+        UInt8 is_described "0 si absent de description_service.csv (ex. NEURO)"
+    }
+    actes {
+        String stay_id FK "séjour réel"
+        String patient_hash FK "repris du séjour"
+        String service_code FK "repris DU SÉJOUR (jamais porté par l'acte)"
+        String code_ccam FK "présent au référentiel ccam"
+        DateTime acte_ts
+        Date acte_date "PARTITION BY mois"
+    }
+    ccam {
+        String code_ccam PK "codes CCAM observés en actes"
+        String libelle
+        UInt32 tarif_euros "facturation T2A"
+    }

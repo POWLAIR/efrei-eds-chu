@@ -10,6 +10,10 @@ Python **pilote** uniquement ; toutes les transformations sont en SQL dans `sql/
 L'étape `clean` ne contient que le journal de quarantaine `clean.rejects` (lignes
 écartées par les contrôles qualité), alimenté pendant l'étape silver.
 
+Sources : `patients`, `sejours`, `diagnostics`, `monitoring`, `referentiels` +
+**`actes`** (flux ajouté par l'évolution du sujet — dépôt `2026-08-29` :
+`actes.parquet`, `description_service.csv`, `ccam.csv`).
+
 ## Prérequis
 
 1. `.env` présent (`cp .env.example .env`) avec **`PSEUDO_SALT`** renseigné (secret, non committé).
@@ -24,9 +28,9 @@ uv run eds run-daily            # ingest(jour) + transform + verify, dans UN seu
 make status                     # vérifier meta.runs : dernier run = success
 ```
 
-Le jeu source (`data/source-filestorage/`, 2026-08-01 → 28) est **versionné** : aucun
-`make seed` à lancer. `run-daily` est ce que le cron exécute. Pour une date précise :
-`uv run eds run-daily --date 2026-08-27`.
+Le jeu source (`data/source-filestorage/`, 2026-08-01 → 28 + dépôt évolution 2026-08-29)
+est **versionné** : aucun `make seed` à lancer. `run-daily` est ce que le cron exécute.
+Pour une date précise : `uv run eds run-daily --date 2026-08-27`.
 Étapes séparées si besoin : `make ingest DATE=…`, `make transform`, `make verify`.
 Tous les jours d'un coup : `make ingest` (la variable `DATES` liste l'arbo automatiquement).
 
@@ -39,11 +43,15 @@ SELECT count() FROM bronze.patients;                    -- 18000 (3 instantanés
 SELECT count() FROM silver.patients;                    -- 6000 (déduplication)
 SELECT count() FROM silver.sejours;                     -- 6729 (= gold.fact_sejour ; 68 écartés)
 SELECT count() FROM silver.pathologies;                 -- 13 codes CIM-10 observés en diagnostics
-SELECT source, rule, count() FROM clean.rejects GROUP BY 1,2 ORDER BY 3 DESC;  -- monitoring 858 · diagnostics 127 · sejours 68
-SELECT * FROM gold.kpi_recherche_prevalence;            -- 11 lignes (Q90/E84 masqués : cohorte < 5)
+SELECT count() FROM gold.fact_acte;                     -- 8112 (= silver.actes ; évolution)
+SELECT count() FROM silver.services WHERE is_described = 0;  -- 1 (NEURO non décrit)
+SELECT source, rule, count() FROM clean.rejects GROUP BY 1,2 ORDER BY 3 DESC;  -- monitoring 858 · sejours 68 · actes 82 · referentiels 1
+SELECT * FROM gold.kpi_recherche_prevalence;            -- 11 lignes (Q90/E84 masqués : cohorte < 5) ; N39 = 2234
+SELECT * FROM gold.kpi_pilotage_readmission_30j;        -- 780 / 6729 / 11.59
 ```
 
-Ou, plus simple : `make verify` — 8 contrôles de réconciliation, exit ≠ 0 si un chiffre ne colle pas.
+Ou, plus simple : `make verify` — 12 contrôles de réconciliation, exit ≠ 0 si un chiffre ne colle pas
+(dont `09_corrige_niveau1` : repères de la feuille de réponses officielle ; `10-12` : actes).
 
 ## Reprise sur incident
 
@@ -66,7 +74,8 @@ et le run est marqué `error` dans `meta.runs`. Surveillance : `grep ALERTE logs
 
 ## Dossier de rendu
 
-`make schema` régénère les PNG de `report/schemas/` (`bronze`, `architecture`, `silver`, `etoile`) depuis les `.mmd`.
+`make schema` régénère les PNG de `report/schemas/` (`bronze`, `architecture`, `silver`, `etoile`,
+`silver-v2`, `etoile-v2`) depuis les `.mmd`.
 `make report` régénère `report/dossier.pdf` depuis `report/dossier.md`
 (`report/generate_pdf.py` — QA visuelle avec `--qa` : PNG par page, à supprimer ensuite).
 
@@ -75,8 +84,10 @@ et le run est marqué `error` dans `meta.runs`. Surveillance : `grep ALERTE logs
 - **Ne jamais** committer `data/lake/` ni `.env` (déjà dans `.gitignore`). `data/source-filestorage/`
   **est** versionné : jeu 100 % synthétique, pour exécuter le pipeline sans import.
 - La perte de `PSEUDO_SALT` casse toutes les jointures patient historiques → le sauvegarder hors dépôt.
-- Les référentiels (`services`, `cim10`) ne sont déposés que le **premier jour** : ne pas
-  traiter leur absence les jours suivants comme une erreur.
+- Les référentiels (`services`, `cim10` le 1er jour ; `description_service`, `ccam` le
+  2026-08-29) ne sont **pas** déposés chaque jour : ne pas traiter leur absence comme une erreur.
+- `description_service.csv` peut être **incomplet** (NEURO non décrit) : le service est
+  conservé (`categorie = '(non décrit)'`, `capacite_lits = NULL`), c'est voulu.
 - `make transform` fait un `TRUNCATE`+`INSERT` par table : c'est voulu (idempotence), pas un bug.
 - Metabase (image `v0.63`) : 1ᵉʳ boot lent (~3 min) ; `make dashboards` attend qu'il soit prêt.
 - **Ne pas `rm -rf data/lake`** pendant que ClickHouse tourne : le bind-mount se casse

@@ -20,7 +20,7 @@
 - [x] Gestion des erreurs : run en échec → `error` dans `meta.runs` + ligne `[ALERTE]` cron ; `make replay DATE=…`
 - [x] Journalisation : `logs/pipeline-*.log`
 - [x] Traçabilité : `meta.runs`, `meta.ingested_files`
-- [x] **Contrôle de fiabilité** : `eds verify` — 8 contrôles de réconciliation (`sql/5_checks/`)
+- [x] **Contrôle de fiabilité** : `eds verify` — 12 contrôles de réconciliation (`sql/5_checks/`)
 - [x] **Doc d'utilisation et de maintenance** : `README.md` + `.claude/skills/eds-run/SKILL.md`
 
 ## ★ Bonus — anonymisation à l'entrée du lake
@@ -29,6 +29,25 @@
 - [x] `birth_date` → année
 - [x] Suppression `nir`, `nom`, `prenom`
 - [x] Aucune donnée identifiante n'atteint l'entrepôt
+
+## ★ Évolution du sujet (dépôt 2026-08-29)
+
+> Contexte : `07-evolution-contexte.md` · conception : `08-evolution-silver-kpi.md` ·
+> comparatif corrigé niveau 1 : `09-corrige-niveau1-comparatif.md` ·
+> dossier : `report/dossier.md` **Partie II** (§ 12-17).
+
+- [x] **Ingestion incrémentale** du nouveau dépôt (`actes/`, `description_service.csv`,
+      `ccam.csv`) — 6ᵉ source `actes` dans `pipeline/config.py`, aucune ré-ingestion de l'existant
+- [x] **`dim_service` complétée** : `categorie`, `capacite_lits`, `pole` (via `silver.services`)
+- [x] **`dim_ccam`** ajoutée (via `silver.ccam`, codes observés)
+- [x] **`fact_acte`** ajoutée (grain = 1 acte ; `service_code` résolu dans `silver.actes`)
+- [x] **5 KPI évolution** (`gold.kpi_pilotage_{activite_categorie, actes_service, actes_type,
+      densite_actes_lit, montant_t2a}`) + `GRANT` `role_pilotage`
+- [x] **3ᵉ dashboard** Metabase *« Pilotage — plateau technique & T2A »* (`make dashboards`)
+- [x] **Piège 1** (service non décrit NEURO) : conservé, `(non décrit)`, tracé `clean.rejects`
+- [x] **Piège 2** (service porté par le séjour) : résolu en silver, contrôle `11`
+- [x] **Non-régression** : `fact_sejour` = 6 729 inchangé ; contrôles `10-12` ajoutés
+- [x] **KPI niveau 1 réalignés** sur la feuille de réponses officielle + contrôle `09`
 
 ## Liste de contrôle avant remise
 

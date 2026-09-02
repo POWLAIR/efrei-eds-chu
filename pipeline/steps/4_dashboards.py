@@ -110,11 +110,70 @@ CARDS: list[dict[str, Any]] = [
         "display": "table",
         "viz": {},
     },
+    # --- Évolution : plateau technique & T2A (dashboard dédié) ----------------
+    {
+        "name": "Activité et DMS par catégorie de service",
+        "db": DB_PILOTAGE,
+        "dash": "plateau",
+        "sql": (
+            "SELECT categorie, nb_sejours, dms_jours "
+            "FROM gold.kpi_pilotage_activite_categorie ORDER BY nb_sejours DESC"
+        ),
+        "display": "bar",
+        "viz": {"graph.dimensions": ["categorie"], "graph.metrics": ["nb_sejours"]},
+    },
+    {
+        "name": "Nombre d'actes par service",
+        "db": DB_PILOTAGE,
+        "dash": "plateau",
+        "sql": (
+            "SELECT service_label, nb_actes, actes_par_sejour "
+            "FROM gold.kpi_pilotage_actes_service ORDER BY nb_actes DESC"
+        ),
+        "display": "bar",
+        "viz": {"graph.dimensions": ["service_label"], "graph.metrics": ["nb_actes"]},
+    },
+    {
+        "name": "Répartition des actes par type",
+        "db": DB_PILOTAGE,
+        "dash": "plateau",
+        "sql": (
+            "SELECT libelle, nb_actes FROM gold.kpi_pilotage_actes_type ORDER BY nb_actes DESC"
+        ),
+        "display": "row",
+        "viz": {"graph.dimensions": ["libelle"], "graph.metrics": ["nb_actes"]},
+    },
+    {
+        "name": "Densité d'actes par lit",
+        "db": DB_PILOTAGE,
+        "dash": "plateau",
+        "sql": (
+            "SELECT service_label, actes_par_lit "
+            "FROM gold.kpi_pilotage_densite_actes_lit ORDER BY actes_par_lit DESC NULLS LAST"
+        ),
+        "display": "bar",
+        "viz": {"graph.dimensions": ["service_label"], "graph.metrics": ["actes_par_lit"]},
+    },
+    {
+        "name": "Montant facturé par service (T2A)",
+        "db": DB_PILOTAGE,
+        "dash": "plateau",
+        "sql": (
+            "SELECT service_label, montant_total_euros "
+            "FROM gold.kpi_pilotage_montant_t2a ORDER BY montant_total_euros DESC"
+        ),
+        "display": "bar",
+        "viz": {"graph.dimensions": ["service_label"], "graph.metrics": ["montant_total_euros"]},
+    },
 ]
 
+_PLATEAU = [c["name"] for c in CARDS if c.get("dash") == "plateau"]
 DASHBOARDS = [
-    ("Pilotage hospitalier", GROUP_PILOTAGE, [c["name"] for c in CARDS if c["db"] == DB_PILOTAGE]),
-    ("Recherche clinique", GROUP_RECHERCHE, [c["name"] for c in CARDS if c["db"] == DB_RECHERCHE]),
+    ("Pilotage hospitalier", GROUP_PILOTAGE,
+     [c["name"] for c in CARDS if c["db"] == DB_PILOTAGE and c.get("dash") != "plateau"]),
+    ("Pilotage — plateau technique & T2A", GROUP_PILOTAGE, _PLATEAU),
+    ("Recherche clinique", GROUP_RECHERCHE,
+     [c["name"] for c in CARDS if c["db"] == DB_RECHERCHE]),
 ]
 
 
@@ -333,10 +392,19 @@ def cleanup_defaults(mb: MB) -> None:
                 log.info("collection 'Examples' archivée")
 
 
+def _card_sql(card: dict) -> str | None:
+    """Extrait le SQL natif d'une carte, quel que soit le format Metabase (legacy ou MBQL-lib)."""
+    dq = card.get("dataset_query", {})
+    native = dq.get("native")
+    if isinstance(native, dict):
+        return native.get("query")
+    for stage in dq.get("stages", []):
+        if "native" in stage:
+            return stage["native"]
+    return None
+
+
 def ensure_card(mb: MB, spec: dict, db_ids: dict[str, int], coll_ids: dict[str, int]) -> int:
-    existing = {c["name"]: c["id"] for c in mb.rows(mb.get("/api/card"))}
-    if spec["name"] in existing:
-        return existing[spec["name"]]
     coll_name = GROUP_PILOTAGE if spec["db"] == DB_PILOTAGE else GROUP_RECHERCHE
     body = {
         "name": spec["name"],
@@ -349,6 +417,14 @@ def ensure_card(mb: MB, spec: dict, db_ids: dict[str, int], coll_ids: dict[str, 
             "database": db_ids[spec["db"]],
         },
     }
+    existing = {c["name"]: c["id"] for c in mb.rows(mb.get("/api/card"))}
+    if spec["name"] in existing:
+        card_id = existing[spec["name"]]
+        cur = mb.get(f"/api/card/{card_id}")
+        if _card_sql(cur) != spec["sql"] or cur.get("display") != spec["display"]:
+            mb.put(f"/api/card/{card_id}", body)
+            log.info("carte '%s' mise à jour (id=%s)", spec["name"], card_id)
+        return card_id
     card = mb.post("/api/card", body)
     log.info("carte '%s' créée (id=%s)", spec["name"], card["id"])
     return card["id"]
