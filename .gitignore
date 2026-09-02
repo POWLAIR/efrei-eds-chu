@@ -5,6 +5,10 @@
 # data/source-filestorage/ EST versionné : jeu 100 % synthétique du sujet, pour que
 # l'intervenant exécute le pipeline sans import (cf. dossier § 9).
 
+# Corrigé « feuille de réponses » — marqué « NE PAS DISTRIBUER » : on le garde en local
+# (le comparatif docs/context/09-* + le contrôle 09_corrige_niveau1 en portent la substance)
+/docs/REPONSES-KPI-niveau1.pdf
+
 # Secrets & env
 .env
 
