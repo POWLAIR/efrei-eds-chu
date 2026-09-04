@@ -238,7 +238,7 @@ pour le détail avant/après.
 | KPI | Définition | Valeur |
 |---|---|---|
 | Prévalence par pathologie | `uniqExact(patient_hash)` par `code_cim10`, **tous diagnostics** (principal + associé), `HAVING ≥ 5` | N39 (infection urinaire) **2 234** · E11 (diabète) 2 177 · I50 (insuffisance cardiaque) 2 156 · J44 (BPCO) 1 775 · J18 850 — **11 pathologies** diffusées |
-| Cohorte pathologie × âge × sexe | `uniqExact(patient_hash)` par diagnostic **principal** × tranche d'âge **décennale** × sexe, `HAVING ≥ 5` | **89 cellules** diffusées (13 pathologies × tranches × M/F) |
+| Cohorte pathologie × âge × sexe | `uniqExact(patient_hash)` par diagnostic **principal** × tranche d'âge **décennale** × sexe, `HAVING ≥ 5` | **89 cellules** diffusées (10 pathologies × tranches × M/F) ; le dashboard la **restitue en pyramide âge × sexe** (agrégée sur les pathologies) |
 
 **k-anonymat en action** : `cim10.csv` inclut trois pathologies pédiatriques rares.
 E84 (Mucoviscidose, **4** patients) et Q90 (Trisomie 21, **3**) ont une cohorte < 5 → leurs

@@ -102,14 +102,22 @@ CARDS: list[dict[str, Any]] = [
         "viz": {"graph.dimensions": ["libelle_cim10"], "graph.metrics": ["nb_patients"]},
     },
     {
-        "name": "Description de cohorte : pathologie × âge × sexe",
+        # Pyramide des âges : la vue gold détaille pathologie × tranche décennale × sexe
+        # (89 cellules, cf. verify 04/09) ; on agrège ici sur les pathologies pour la
+        # restitution « distribution par âge et sexe » demandée par la fiche-sujet.
+        "name": "Description de cohorte : âge × sexe",
         "db": DB_RECHERCHE,
         "sql": (
-            "SELECT code_cim10, tranche_age, sexe, nb_patients "
-            "FROM gold.kpi_recherche_cohorte_age_sexe ORDER BY code_cim10, tranche_age, sexe"
+            "SELECT tranche_age, sexe, sum(nb_patients) AS nb_patients "
+            "FROM gold.kpi_recherche_cohorte_age_sexe "
+            "GROUP BY tranche_age, sexe ORDER BY tranche_age, sexe"
         ),
-        "display": "table",
-        "viz": {},
+        "display": "bar",
+        "viz": {
+            "graph.dimensions": ["tranche_age", "sexe"],
+            "graph.metrics": ["nb_patients"],
+            "stackable.stack_type": None,
+        },
     },
     # --- Évolution : plateau technique & T2A (dashboard dédié) ----------------
     {

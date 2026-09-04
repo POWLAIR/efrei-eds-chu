@@ -10,7 +10,8 @@
       provisionnés par `make dashboards` (idempotent)
   - [x] Dashboard **Pilotage** (6 cartes) : DMS, activité urgences/jour, réadmission 30 j,
         alertes constantes, charge par service, modes de sortie
-  - [x] Dashboard **Recherche** : prévalence par pathologie, cohorte pathologie × âge × sexe
+  - [x] Dashboard **Recherche** : prévalence par pathologie, cohorte en pyramide âge × sexe
+        (la vue gold garde le détail pathologie × tranche décennale × sexe — cf. § 16)
   - [x] **Démonstration du cloisonnement** : `dashboards/captures/01-*` (base/collection),
         `02-*` (RBAC ClickHouse `ACCESS_DENIED`) ; détails `dashboards/README.md`
   - [x] Reproductible : définition dans `CARDS` / `DASHBOARDS` (`pipeline/steps/4_dashboards.py`),
