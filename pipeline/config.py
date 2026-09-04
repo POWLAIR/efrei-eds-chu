@@ -18,7 +18,8 @@ ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT / ".env")
 
 # Sources attendues dans le filestorage et format de dépôt
-SOURCES = ("patients", "sejours", "diagnostics", "monitoring", "referentiels")
+# `actes` : flux de faits ajouté par l'évolution du sujet (dépôt 2026-08-29).
+SOURCES = ("patients", "sejours", "diagnostics", "monitoring", "referentiels", "actes")
 
 # Sources contenant de l'identité patient -> pseudonymisation obligatoire à l'entrée du lake
 IDENTIFYING_SOURCES = ("patients", "sejours")

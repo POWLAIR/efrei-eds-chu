@@ -6,10 +6,15 @@ Projet fil rouge · **Big Data M2 · Épreuve E05**. Pipeline ELT en patron *mé
 sur un laptop.
 
 **Livrables** — *Partie 1* : dossier d'architecture [`report/dossier.pdf`](report/dossier.pdf)
-et 2 dashboards Metabase (pilotage / recherche) avec démonstration du cloisonnement.
+et des dashboards Metabase (pilotage / recherche / plateau technique) avec démonstration du cloisonnement.
 *Partie 2* : pipeline planifié, tracé et rejouable (§ [Automatisation](#automatisation-partie-2)).
 Doc d'exploitation & reprise sur incident : [`.claude/skills/eds-run/SKILL.md`](.claude/skills/eds-run/SKILL.md).
 
+> **Évolution du sujet** (dépôt `2026-08-29`) : actes médicaux (`fact_acte`) + description
+> enrichie des services. KPI niveau 1 réalignés sur la feuille de réponses officielle.
+> Détail : `docs/context/07` à `09`, `report/dossier.md` **Partie II**, 3ᵉ dashboard
+> *« Plateau technique & T2A »*.
+>
 > Contexte détaillé : [`docs/context/`](docs/context/) — synthèse du sujet, dictionnaire
 > des données, KPI, contraintes RGPD, architecture, contrôles qualité, livrables.
 
@@ -29,13 +34,13 @@ make up                   # ClickHouse (:8123/play) + Metabase (:3000)
 make init-db              # bases médaillon + meta + users RBAC
 make ingest               # filestorage -> lake (pseudonymisé, incrémental)
 make transform            # bronze -> clean -> silver -> gold (SQL dans ClickHouse)
-make verify               # 8 contrôles de fiabilité (réconciliation KPI, k-anonymat)
-make dashboards           # provisionne Metabase : connexions, groupes, 2 dashboards
+make verify               # 12 contrôles de fiabilité (réconciliation KPI, k-anonymat)
+make dashboards           # provisionne Metabase : connexions, groupes, 3 dashboards
 make report               # génère report/dossier.pdf (+ schémas)
 ```
 
-> Le jeu source (`data/source-filestorage/`, 28 jours — 2026-08-01 → 28) est **versionné**
-> dans le dépôt : données 100 % fictives, aucun import à faire.
+> Le jeu source (`data/source-filestorage/`, 28 jours 2026-08-01 → 28 + dépôt évolution
+> 2026-08-29) est **versionné** dans le dépôt : données 100 % fictives, aucun import à faire.
 
 Ou tout enchaîner : `make all`.
 

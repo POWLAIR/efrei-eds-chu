@@ -2,9 +2,10 @@
 # Usage : make <cible>   (voir `make help`)
 
 SHELL := /bin/bash
-# Dates de dépôt à ingérer : découvertes depuis l'arbo versionnée (data/source-filestorage/
-# est committé — jeu synthétique). Override possible : make ingest DATES="2026-08-01 ..."
-DATES ?= $(shell ls data/source-filestorage/sejours 2>/dev/null)
+# Dates de dépôt à ingérer : découvertes depuis l'arbo versionnée, TOUTES sources
+# confondues (data/source-filestorage/ est committé — jeu synthétique + dépôt évolution
+# 2026-08-29). Override possible : make ingest DATES="2026-08-01 ..."
+DATES ?= $(shell ls -d data/source-filestorage/*/*/ 2>/dev/null | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | sort -u)
 RUN   := uv run eds
 
 .DEFAULT_GOAL := help
@@ -88,6 +89,8 @@ schema: ## Exporte les schémas mermaid en PNG (report/schemas/*.png)
 	$(MMDC) -i report/schemas/bronze.mmd       -o report/schemas/bronze.png       -b white -w 1500
 	$(MMDC) -i report/schemas/silver.mmd       -o report/schemas/silver.png       -b white -w 1500
 	$(MMDC) -i report/schemas/etoile.mmd       -o report/schemas/etoile.png       -b white -w 1400
+	$(MMDC) -i report/schemas/silver-v2.mmd    -o report/schemas/silver-v2.png    -b white -w 1700
+	$(MMDC) -i report/schemas/etoile-v2.mmd    -o report/schemas/etoile-v2.png    -b white -w 1600
 
 .PHONY: report
 report: schema ## Génère report/dossier.pdf depuis report/dossier.md (design corporate)

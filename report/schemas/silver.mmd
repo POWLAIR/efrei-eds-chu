@@ -1,5 +1,6 @@
 erDiagram
     patients    ||--o{ sejours     : "patient_hash"
+    patients    ||--o{ diagnostics : "patient_hash"
     sejours     ||--o{ diagnostics : "stay_id"
     pathologies ||--o{ diagnostics : "code_cim10"
 
@@ -20,7 +21,8 @@ erDiagram
         Float64 los_hours "durée — NULL si en cours"
     }
     diagnostics {
-        String stay_id FK "rattaché à un séjour valide"
+        String stay_id FK "séjour RÉEL (bronze) — conservé même si dates incohérentes"
+        String patient_hash FK "repris de bronze.sejours"
         String code_cim10 FK "présent au référentiel cim10"
         String type "principal | associe"
     }

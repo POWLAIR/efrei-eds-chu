@@ -1,0 +1,48 @@
+erDiagram
+    dim_patient ||--o{ fact_sejour : "patient_hash"
+    dim_service ||--o{ fact_sejour : "service_code"
+    dim_cim10   ||--o{ fact_sejour : "diag_principal"
+    dim_service ||--o{ fact_acte   : "service_code (venu du séjour)"
+    dim_ccam    ||--o{ fact_acte   : "code_ccam"
+    dim_patient ||--o{ fact_acte   : "patient_hash"
+
+    fact_sejour {
+        string stay_id PK
+        string patient_hash FK
+        string service_code FK
+        string diag_principal FK
+        date   admission_date "dimension dégénérée"
+        float  los_days "mesure"
+        uint8  is_closed "mesure"
+        uint8  is_urgence "mesure"
+    }
+    fact_acte {
+        string stay_id
+        string patient_hash FK
+        string service_code FK "dénormalisé depuis le séjour"
+        string code_ccam FK
+        date   acte_date "dimension dégénérée"
+        uint32 tarif_euros "mesure (montant T2A)"
+    }
+    dim_patient {
+        string patient_hash PK
+        string sex
+        string region_code
+        string age_band "tranches décennales"
+    }
+    dim_service {
+        string service_code PK
+        string service_label
+        string categorie "NEW — niveau d'agrégation intermédiaire"
+        uint16 capacite_lits "NEW — nullable (service non décrit)"
+        string pole "NEW — niveau d'agrégation supérieur"
+    }
+    dim_cim10 {
+        string code_cim10 PK
+        string libelle
+    }
+    dim_ccam {
+        string code_ccam PK "NEW"
+        string libelle
+        uint32 tarif_euros
+    }

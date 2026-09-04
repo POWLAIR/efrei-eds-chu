@@ -5,7 +5,8 @@
   - crée 2 connexions ClickHouse cloisonnées (ro_pilotage / ro_recherche)
   - crée 2 groupes + permissions de données (chaque groupe ne voit que SA base)
   - crée 1 utilisateur de démo par groupe
-  - crée 2 collections + 2 dashboards (8 cartes SQL natives sur les vues gold)
+  - crée 2 collections + 3 dashboards (13 cartes SQL natives sur les vues gold :
+    Pilotage 6, Pilotage — plateau technique & T2A 5, Recherche 2)
 
 Toutes les opérations sont « find-or-create » : relancer ne duplique rien.
 La définition des dashboards (cartes, SQL, disposition) vit dans `CARDS` /
@@ -44,19 +45,19 @@ CARDS: list[dict[str, Any]] = [
         "name": "Passages aux urgences par jour",
         "db": DB_PILOTAGE,
         "sql": (
-            "SELECT jour, passages_urgence, admissions_totales "
-            "FROM gold.kpi_pilotage_urgences_jour ORDER BY jour"
+            "SELECT admission_date, nb_passages, nb_encore_presents "
+            "FROM gold.kpi_pilotage_urgences_jour ORDER BY admission_date"
         ),
         "display": "line",
         "viz": {
-            "graph.dimensions": ["jour"],
-            "graph.metrics": ["passages_urgence", "admissions_totales"],
+            "graph.dimensions": ["admission_date"],
+            "graph.metrics": ["nb_passages", "nb_encore_presents"],
         },
     },
     {
         "name": "Taux de réadmission à 30 jours (%)",
         "db": DB_PILOTAGE,
-        "sql": "SELECT taux_pct FROM gold.kpi_pilotage_readmission_30j",
+        "sql": "SELECT taux_readmission_30j_pct FROM gold.kpi_pilotage_readmission_30j",
         "display": "scalar",
         "viz": {},
     },
@@ -64,14 +65,13 @@ CARDS: list[dict[str, Any]] = [
         "name": "Relevés de constantes en alerte par jour",
         "db": DB_PILOTAGE,
         "sql": (
-            "SELECT jour, alertes_fc, alertes_spo2, alertes_temp "
+            "SELECT jour, nb_alertes, taux_alertes_pct "
             "FROM gold.kpi_pilotage_alertes_constantes ORDER BY jour"
         ),
         "display": "bar",
         "viz": {
             "graph.dimensions": ["jour"],
-            "graph.metrics": ["alertes_fc", "alertes_spo2", "alertes_temp"],
-            "stackable.stack_type": "stacked",
+            "graph.metrics": ["nb_alertes"],
         },
     },
     {
@@ -95,27 +95,94 @@ CARDS: list[dict[str, Any]] = [
         "name": "Prévalence par pathologie (cohortes ≥ 5)",
         "db": DB_RECHERCHE,
         "sql": (
-            "SELECT libelle, cohorte_patients FROM gold.kpi_recherche_prevalence "
-            "ORDER BY cohorte_patients DESC LIMIT 15"
+            "SELECT libelle_cim10, nb_patients FROM gold.kpi_recherche_prevalence "
+            "ORDER BY nb_patients DESC LIMIT 15"
         ),
         "display": "row",
-        "viz": {"graph.dimensions": ["libelle"], "graph.metrics": ["cohorte_patients"]},
+        "viz": {"graph.dimensions": ["libelle_cim10"], "graph.metrics": ["nb_patients"]},
     },
     {
+        # Pyramide des âges : la vue gold détaille pathologie × tranche décennale × sexe
+        # (89 cellules, cf. verify 04/09) ; on agrège ici sur les pathologies pour la
+        # restitution « distribution par âge et sexe » demandée par la fiche-sujet.
         "name": "Description de cohorte : âge × sexe",
         "db": DB_RECHERCHE,
         "sql": (
-            "SELECT age_band, sex, nb_patients FROM gold.kpi_recherche_cohorte_age_sexe "
-            "ORDER BY age_band, sex"
+            "SELECT tranche_age, sexe, sum(nb_patients) AS nb_patients "
+            "FROM gold.kpi_recherche_cohorte_age_sexe "
+            "GROUP BY tranche_age, sexe ORDER BY tranche_age, sexe"
         ),
         "display": "bar",
-        "viz": {"graph.dimensions": ["age_band", "sex"], "graph.metrics": ["nb_patients"]},
+        "viz": {
+            "graph.dimensions": ["tranche_age", "sexe"],
+            "graph.metrics": ["nb_patients"],
+            "stackable.stack_type": None,
+        },
+    },
+    # --- Évolution : plateau technique & T2A (dashboard dédié) ----------------
+    {
+        "name": "Activité et DMS par catégorie de service",
+        "db": DB_PILOTAGE,
+        "dash": "plateau",
+        "sql": (
+            "SELECT categorie, nb_sejours, dms_jours "
+            "FROM gold.kpi_pilotage_activite_categorie ORDER BY nb_sejours DESC"
+        ),
+        "display": "bar",
+        "viz": {"graph.dimensions": ["categorie"], "graph.metrics": ["nb_sejours"]},
+    },
+    {
+        "name": "Nombre d'actes par service",
+        "db": DB_PILOTAGE,
+        "dash": "plateau",
+        "sql": (
+            "SELECT service_label, nb_actes, actes_par_sejour "
+            "FROM gold.kpi_pilotage_actes_service ORDER BY nb_actes DESC"
+        ),
+        "display": "bar",
+        "viz": {"graph.dimensions": ["service_label"], "graph.metrics": ["nb_actes"]},
+    },
+    {
+        "name": "Répartition des actes par type",
+        "db": DB_PILOTAGE,
+        "dash": "plateau",
+        "sql": (
+            "SELECT libelle, nb_actes FROM gold.kpi_pilotage_actes_type ORDER BY nb_actes DESC"
+        ),
+        "display": "row",
+        "viz": {"graph.dimensions": ["libelle"], "graph.metrics": ["nb_actes"]},
+    },
+    {
+        "name": "Densité d'actes par lit",
+        "db": DB_PILOTAGE,
+        "dash": "plateau",
+        "sql": (
+            "SELECT service_label, actes_par_lit "
+            "FROM gold.kpi_pilotage_densite_actes_lit ORDER BY actes_par_lit DESC NULLS LAST"
+        ),
+        "display": "bar",
+        "viz": {"graph.dimensions": ["service_label"], "graph.metrics": ["actes_par_lit"]},
+    },
+    {
+        "name": "Montant facturé par service (T2A)",
+        "db": DB_PILOTAGE,
+        "dash": "plateau",
+        "sql": (
+            "SELECT service_label, montant_total_euros "
+            "FROM gold.kpi_pilotage_montant_t2a ORDER BY montant_total_euros DESC"
+        ),
+        "display": "bar",
+        "viz": {"graph.dimensions": ["service_label"], "graph.metrics": ["montant_total_euros"]},
     },
 ]
 
+_PLATEAU = [c["name"] for c in CARDS if c.get("dash") == "plateau"]
 DASHBOARDS = [
-    ("Pilotage hospitalier", GROUP_PILOTAGE, [c["name"] for c in CARDS if c["db"] == DB_PILOTAGE]),
-    ("Recherche clinique", GROUP_RECHERCHE, [c["name"] for c in CARDS if c["db"] == DB_RECHERCHE]),
+    ("Pilotage hospitalier", GROUP_PILOTAGE,
+     [c["name"] for c in CARDS if c["db"] == DB_PILOTAGE and c.get("dash") != "plateau"]),
+    ("Pilotage — plateau technique & T2A", GROUP_PILOTAGE, _PLATEAU),
+    ("Recherche clinique", GROUP_RECHERCHE,
+     [c["name"] for c in CARDS if c["db"] == DB_RECHERCHE]),
 ]
 
 
@@ -334,10 +401,19 @@ def cleanup_defaults(mb: MB) -> None:
                 log.info("collection 'Examples' archivée")
 
 
+def _card_sql(card: dict) -> str | None:
+    """Extrait le SQL natif d'une carte, quel que soit le format Metabase (legacy ou MBQL-lib)."""
+    dq = card.get("dataset_query", {})
+    native = dq.get("native")
+    if isinstance(native, dict):
+        return native.get("query")
+    for stage in dq.get("stages", []):
+        if "native" in stage:
+            return stage["native"]
+    return None
+
+
 def ensure_card(mb: MB, spec: dict, db_ids: dict[str, int], coll_ids: dict[str, int]) -> int:
-    existing = {c["name"]: c["id"] for c in mb.rows(mb.get("/api/card"))}
-    if spec["name"] in existing:
-        return existing[spec["name"]]
     coll_name = GROUP_PILOTAGE if spec["db"] == DB_PILOTAGE else GROUP_RECHERCHE
     body = {
         "name": spec["name"],
@@ -350,6 +426,14 @@ def ensure_card(mb: MB, spec: dict, db_ids: dict[str, int], coll_ids: dict[str, 
             "database": db_ids[spec["db"]],
         },
     }
+    existing = {c["name"]: c["id"] for c in mb.rows(mb.get("/api/card"))}
+    if spec["name"] in existing:
+        card_id = existing[spec["name"]]
+        cur = mb.get(f"/api/card/{card_id}")
+        if _card_sql(cur) != spec["sql"] or cur.get("display") != spec["display"]:
+            mb.put(f"/api/card/{card_id}", body)
+            log.info("carte '%s' mise à jour (id=%s)", spec["name"], card_id)
+        return card_id
     card = mb.post("/api/card", body)
     log.info("carte '%s' créée (id=%s)", spec["name"], card["id"])
     return card["id"]

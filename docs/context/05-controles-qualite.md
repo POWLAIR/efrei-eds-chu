@@ -21,8 +21,13 @@
 
 | Domaine | Contrôle | Fichier SQL | Règle `clean.rejects` |
 |---|---|---|---|
-| diagnostics | diagnostic rattaché à un séjour inconnu / écarté | `3_silver/40_diagnostics.sql` | `sejour_inconnu` |
+| diagnostics | `stay_id` **totalement inconnu** de `bronze.sejours` | `3_silver/40_diagnostics.sql` | `sejour_inconnu` |
 | diagnostics | `code_cim10` absent du référentiel | `3_silver/40_diagnostics.sql` | `code_cim10_hors_referentiel` |
+
+> ⚠️ Un diagnostic porté par un séjour **écarté pour incohérence de dates** n'est **plus**
+> rejeté : l'erreur est sur les dates du séjour, pas sur le codage. Ces 127 diagnostics sont
+> **conservés** dans `silver.diagnostics` (prévalence / cohortes) mais restent hors
+> `gold.fact_sejour`. Aligné sur la feuille de réponses officielle — cf. `09-corrige-niveau1-comparatif.md`.
 | sejours | durée > 180 j (sans être négative) | `3_silver/20_sejours.sql` | `duree_sejour_aberrante` |
 | sejours | `service_code` absent du référentiel `services` | `3_silver/20_sejours.sql` | `service_hors_referentiel` |
 | patients | `birth_year` dans le futur ou < 1900 → NULL, tracé | `3_silver/10_patients.sql` | `birth_year_aberrant` |

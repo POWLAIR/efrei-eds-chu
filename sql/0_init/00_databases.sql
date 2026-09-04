@@ -35,6 +35,13 @@ GRANT SELECT ON gold.kpi_pilotage_alertes_constantes   TO role_pilotage;
 GRANT SELECT ON gold.kpi_pilotage_mode_sortie          TO role_pilotage;
 GRANT SELECT ON gold.kpi_pilotage_charge_service       TO role_pilotage;
 
+-- Évolution (actes / T2A) — même public (pilotage)
+GRANT SELECT ON gold.kpi_pilotage_activite_categorie   TO role_pilotage;
+GRANT SELECT ON gold.kpi_pilotage_actes_service        TO role_pilotage;
+GRANT SELECT ON gold.kpi_pilotage_actes_type           TO role_pilotage;
+GRANT SELECT ON gold.kpi_pilotage_densite_actes_lit    TO role_pilotage;
+GRANT SELECT ON gold.kpi_pilotage_montant_t2a          TO role_pilotage;
+
 -- Recherche : accès aux vues recherche (k-anonymat déjà appliqué dans la vue)
 GRANT SELECT ON gold.kpi_recherche_prevalence          TO role_recherche;
 GRANT SELECT ON gold.kpi_recherche_cohorte_age_sexe    TO role_recherche;

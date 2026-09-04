@@ -37,6 +37,9 @@ et exportées **chaque jour** sous forme de fichiers, dans des **formats différ
 - **★ Bonus fortement valorisé** : anonymisation automatisée à l'entrée du lake
   (hachage déterministe salé de l'identifiant patient, date de naissance → année,
   suppression des identifiants directs). → **implémenté** ici dès le départ.
+- **★ Évolution du sujet** (dépôt 2026-08-29) : actes médicaux (CCAM / T2A) +
+  description fine des services → `dim_service` enrichie, `dim_ccam`, `fact_acte`,
+  5 KPI, 3ᵉ dashboard. Dossier **Partie II § 12-17** ; contexte `07` à `09`.
 
 ## Barème (indicatif, /20)
 

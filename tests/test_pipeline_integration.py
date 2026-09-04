@@ -60,7 +60,7 @@ def test_ingest_incremental_deja_connu():
 
 
 def test_verify_passe_sur_jeu_fourni():
-    """Les 8 contrôles de réconciliation passent sur le jeu de données fourni."""
+    """Les 12 contrôles de réconciliation passent sur le jeu de données fourni."""
     c = _ch()
     if _count(c, "gold.fact_sejour") == 0:
         pytest.skip("pipeline non exécuté — lancer `make all`")
@@ -89,5 +89,61 @@ def test_kanonymat_vues_recherche():
     c = _ch()
     if _count(c, "gold.fact_sejour") == 0:
         pytest.skip("pipeline non exécuté")
-    assert _count(c, "gold.kpi_recherche_prevalence WHERE cohorte_patients < 5") == 0
+    assert _count(c, "gold.kpi_recherche_prevalence WHERE nb_patients < 5") == 0
     assert _count(c, "gold.kpi_recherche_cohorte_age_sexe WHERE nb_patients < 5") == 0
+
+
+def test_corrige_niveau1_repere_prevalence():
+    """La prévalence reproduit la feuille de réponses officielle (tous diagnostics)."""
+    c = _ch()
+    if _count(c, "silver.diagnostics") == 0:
+        pytest.skip("pipeline non exécuté")
+    n39 = c.query(
+        "SELECT nb_patients FROM gold.kpi_recherche_prevalence WHERE code_cim10 = 'N39'"
+    ).result_rows[0][0]
+    assert n39 == 2234
+
+
+# --- Évolution : actes médicaux + description des services --------------------
+
+
+def test_fact_acte_conserve_silver_actes():
+    """gold.fact_acte conserve exactement silver.actes (> 0)."""
+    c = _ch()
+    n = _count(c, "silver.actes")
+    if n == 0:
+        pytest.skip("évolution non ingérée — lancer `make ingest`")
+    assert _count(c, "gold.fact_acte") == n
+
+
+def test_service_non_decrit_conserve():
+    """Un service absent de description_service.csv est conservé, marqué non décrit."""
+    c = _ch()
+    if _count(c, "silver.services") == 0:
+        pytest.skip("évolution non ingérée")
+    row = c.query(
+        "SELECT is_described, categorie, capacite_lits FROM silver.services "
+        "WHERE service_code = 'NEURO'"
+    ).result_rows[0]
+    assert row[0] == 0 and row[1] == "(non décrit)" and row[2] is None
+
+
+def test_acte_service_vient_du_sejour():
+    """Le service d'un acte = le service de son séjour (jamais porté par l'acte)."""
+    c = _ch()
+    if _count(c, "gold.fact_acte") == 0:
+        pytest.skip("évolution non ingérée")
+    incoherents = _count(
+        c,
+        "gold.fact_acte a INNER JOIN gold.fact_sejour f ON f.stay_id = a.stay_id "
+        "WHERE a.service_code != f.service_code",
+    )
+    assert incoherents == 0
+
+
+def test_non_regression_fact_sejour():
+    """L'évolution ne change pas le fait central : toujours 6 729 séjours."""
+    c = _ch()
+    if _count(c, "gold.fact_sejour") == 0:
+        pytest.skip("pipeline non exécuté")
+    assert _count(c, "gold.fact_sejour") == 6729

@@ -71,8 +71,12 @@ def styles() -> dict:
         "code": s("code", fontName="Courier", fontSize=8, textColor=colors.HexColor("#334155"), leading=11),
         "th": s("th", fontName="Helvetica-Bold", fontSize=7.5, textColor=colors.HexColor("#44506a"), leading=10),
         "td": s("td", fontName="Helvetica", fontSize=8, textColor=INK, leading=10.5),
-        "kpi_v": s("kpi_v", fontName="Helvetica-Bold", fontSize=16, textColor=INK, alignment=TA_CENTER, leading=19),
-        "kpi_l": s("kpi_l", fontName="Helvetica", fontSize=6.8, textColor=MUTED, alignment=TA_CENTER, leading=9),
+        "kpi_v": s("kpi_v", fontName="Helvetica-Bold", fontSize=11.5, textColor=INK, alignment=TA_CENTER, leading=13),
+        "kpi_l": s("kpi_l", fontName="Helvetica", fontSize=6.5, textColor=MUTED, alignment=TA_CENTER, leading=8),
+        "toc_part": s("toc_part", fontName="Helvetica-Bold", fontSize=9.5, textColor=ACCENT, leading=13, spaceAfter=3),
+        "toc": s("toc", fontName="Helvetica", fontSize=9, textColor=INK, leading=15),
+        "divider_badge": s("divider_badge", fontName="Helvetica-Bold", fontSize=8.5, textColor=colors.HexColor("#bcd3ff"), leading=12),
+        "divider_title": s("divider_title", fontName="Helvetica-Bold", fontSize=16, textColor=WHITE, leading=20),
         "caption": s("caption", fontName="Helvetica-Oblique", fontSize=8, textColor=MUTED, alignment=TA_CENTER, spaceBefore=2, spaceAfter=8),
         "footer": s("footer", fontName="Helvetica", fontSize=7.5, textColor=MUTED, alignment=TA_CENTER),
     }
@@ -88,7 +92,7 @@ def inline(tok) -> str:
         if t == "text":
             out.append(html.escape(c.content))
         elif t == "code_inline":
-            out.append(f'<font face="Courier" size=8>{html.escape(c.content)}</font>')
+            out.append(f'<font face="Courier" size=8.5>{html.escape(c.content)}</font>')
         elif t == "strong_open":
             out.append("<b>")
         elif t == "strong_close":
@@ -97,7 +101,9 @@ def inline(tok) -> str:
             out.append("<i>")
         elif t == "em_close":
             out.append("</i>")
-        elif t == "softbreak" or t == "hardbreak":
+        elif t == "softbreak":
+            out.append(" ")  # CommonMark : un retour à la ligne simple = une espace
+        elif t == "hardbreak":
             out.append("<br/>")
         elif t == "link_open":
             href = dict(c.attrs).get("href", "")
@@ -115,10 +121,8 @@ def split_images(tok):
     for c in tok.children or []:
         if c.type == "image":
             imgs.append((dict(c.attrs).get("src", ""), c.content or ""))
-        elif c.type in ("softbreak", "hardbreak"):
-            continue
         else:
-            text_children.append(c)
+            text_children.append(c)  # softbreak/hardbreak compris (gérés par inline())
     clone = type(tok)("inline", "", 0)
     clone.children = text_children
     return imgs, inline(clone)
@@ -150,6 +154,7 @@ def header_band(title: str, subtitle: str) -> Table:
 
 
 def kpi_strip(pairs: list[tuple[str, str]]) -> Table:
+    """Bande « chiffres-clés » : une rangée sobre, sans cadre, filets fins haut/bas."""
     n = len(pairs)
     col_w = CONTENT_W / n
     top = [Paragraph(v, ST["kpi_v"]) for _, v in pairs]
@@ -157,15 +162,47 @@ def kpi_strip(pairs: list[tuple[str, str]]) -> Table:
     t = Table([top, bot], colWidths=[col_w] * n)
     cmds = [
         ("BACKGROUND", (0, 0), (-1, -1), WHITE),
-        ("BOX", (0, 0), (-1, -1), 0.5, LINE),
+        ("LINEABOVE", (0, 0), (-1, 0), 0.75, ACCENT),
+        ("LINEBELOW", (0, -1), (-1, -1), 0.5, LINE),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING", (0, 0), (-1, 0), 11), ("BOTTOMPADDING", (0, 0), (-1, 0), 1),
-        ("TOPPADDING", (0, 1), (-1, 1), 0), ("BOTTOMPADDING", (0, 1), (-1, 1), 11),
+        ("TOPPADDING", (0, 0), (-1, 0), 6), ("BOTTOMPADDING", (0, 0), (-1, 0), 1),
+        ("TOPPADDING", (0, 1), (-1, 1), 0), ("BOTTOMPADDING", (0, 1), (-1, 1), 6),
     ]
     for c in range(1, n):
         cmds.append(("LINEBEFORE", (c, 0), (c, -1), 0.5, LINE))
     t.setStyle(TableStyle(cmds))
     return t
+
+
+def part_divider(badge: str, title: str) -> Table:
+    """Séparateur de partie : bandeau ACCENT pleine largeur (badge + titre)."""
+    inner = Table(
+        [[Paragraph(badge, ST["divider_badge"])],
+         [Spacer(1, 5)],
+         [Paragraph(title, ST["divider_title"])]],
+        colWidths=[CONTENT_W - 28],
+    )
+    inner.setStyle(TableStyle([
+        ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    outer = Table([[inner]], colWidths=[CONTENT_W])
+    outer.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), ACCENT),
+        ("LEFTPADDING", (0, 0), (-1, -1), 14), ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+        ("TOPPADDING", (0, 0), (-1, -1), 16), ("BOTTOMPADDING", (0, 0), (-1, -1), 16),
+        ("ROUNDEDCORNERS", [7, 7, 7, 7]),
+    ]))
+    return outer
+
+
+def sommaire(part1: list[str], part2: list[str]) -> list:
+    """Sommaire statique (sans numéros de page), colonne unique, 2 parties."""
+    out: list = [Paragraph("PARTIE I — Interface d'analyse &amp; automatisation", ST["toc_part"])]
+    out += [Paragraph(e, ST["toc"]) for e in part1]
+    out += [Spacer(1, 12), Paragraph("PARTIE II — Évolution du sujet", ST["toc_part"])]
+    out += [Paragraph(e, ST["toc"]) for e in part2]
+    return out
 
 
 def md_table(header: list[str], rows: list[list[str]]) -> Table:
@@ -179,6 +216,7 @@ def md_table(header: list[str], rows: list[list[str]]) -> Table:
         ("BACKGROUND", (0, 0), (-1, 0), HEAD_BG),
         ("LINEBELOW", (0, 0), (-1, 0), 1, ACCENT),
         ("LINEBELOW", (0, 1), (-1, -2), 0.4, LINE),
+        ("LINEBELOW", (0, -1), (-1, -1), 0.6, LINE),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
@@ -201,33 +239,32 @@ def callout(text_html: str):
     return t
 
 
-# Hauteur max par figure. Défaut volontairement modéré pour qu'une figure tienne
-# dans le bas d'une page courante ; on ajuste au cas par cas : schéma ER dense =
-# plus de place, captures d'écran peu denses = moins.
-_MAX_H = {
-    "silver.png": 122 * mm,
-    "01-cloisonnement-recherche.png": 92 * mm,
-    "02-rbac-clickhouse-denied.png": 96 * mm,
-}
-_MAX_H_DEFAULT = 114 * mm
+# Les figures occupent toute la largeur utile ; garde-fou de hauteur pour qu'une
+# figure exceptionnellement haute ne déborde jamais la zone de texte (~255 mm).
+_MAX_H_DEFAULT = 150 * mm
 
 
-def scaled_image(src: str) -> Image | None:
+def scaled_image(src: str):
+    """Figure pleine largeur, entourée d'un filet fin. Renvoie un flowable (Table)."""
     p = (BASE / src).resolve()
     if not p.exists():
         print(f"  ⚠ image absente : {p}", file=sys.stderr)
         return None
     img = Image(str(p))
     ratio = img.imageHeight / img.imageWidth
-    max_w = CONTENT_W
-    max_h = _MAX_H.get(Path(src).name, _MAX_H_DEFAULT)
-    w = min(max_w, img.imageWidth)
+    w = CONTENT_W
     h = w * ratio
-    if h > max_h:
-        h = max_h
+    if h > _MAX_H_DEFAULT:
+        h = _MAX_H_DEFAULT
         w = h / ratio
     img.drawWidth, img.drawHeight = w, h
-    return img
+    framed = Table([[img]], colWidths=[w])
+    framed.setStyle(TableStyle([
+        ("BOX", (0, 0), (-1, -1), 0.5, LINE),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    return framed
 
 
 def _section_has_image(tokens, start: int, level: str) -> bool:
@@ -241,13 +278,64 @@ def _section_has_image(tokens, start: int, level: str) -> bool:
     return False
 
 
+# --- Sommaire (page de garde) ---------------------------------------------
+def collect_outline(tokens) -> tuple[str, str, list[str], list[str], str]:
+    """(titre, sous-titre, sections Partie I, sections Partie II, titre Partie II)."""
+    title, subtitle, p2_title = "", "", "Partie II"
+    part1: list[str] = []
+    part2: list[str] = []
+    seen_h1 = 0
+    for k, t in enumerate(tokens):
+        if t.type != "heading_open":
+            continue
+        txt = re.sub("<[^>]+>", "", inline(tokens[k + 1])).strip()
+        if t.tag == "h1":
+            seen_h1 += 1
+            if seen_h1 == 1:
+                title = txt
+                if tokens[k + 3].type == "paragraph_open":
+                    subtitle = re.sub("<[^>]+>", "", inline(tokens[k + 4])).strip()
+            else:
+                p2_title = txt
+        elif t.tag == "h2":
+            m = re.match(r"(\d+)\.\s*(.+)", txt)
+            entry = f"§ {m.group(1)} — {m.group(2)}" if m else txt
+            (part2 if seen_h1 >= 2 else part1).append(entry)
+    return title, subtitle, part1, part2, p2_title
+
+
+def cover_flowables(tokens) -> list:
+    title, subtitle, part1, part2, _ = collect_outline(tokens)
+    out = [
+        header_band(title or "Entrepôt de Données de Santé du CHU", subtitle),
+        Spacer(1, 26),
+        Paragraph("Sommaire", ST["h2"]),
+        Spacer(1, 4),
+        *sommaire(part1, part2),
+        Spacer(1, 28),
+        Table(
+            [[Paragraph(
+                "Pipeline ELT médaillon · ClickHouse + Metabase · code du pipeline, "
+                "SQL versionné et jeu synthétique inclus dans le dépôt (exécutable sans import).",
+                ST["footer"])]],
+            colWidths=[CONTENT_W],
+            style=TableStyle([
+                ("LINEABOVE", (0, 0), (-1, 0), 0.5, LINE),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ]),
+        ),
+        PageBreak(),
+    ]
+    return out
+
+
 # --- Parcours des tokens ---------------------------------------------------
 def build_story(md_text: str) -> list:
     md = MarkdownIt("commonmark").enable("table").enable("strikethrough")
     tokens = md.parse(md_text)
 
-    story: list = []
-    title, subtitle = "Entrepôt de Données de Santé du CHU", ""
+    story: list = list(cover_flowables(tokens))
     i = 0
     got_title = False
     list_stack: list[list] = []
@@ -260,17 +348,21 @@ def build_story(md_text: str) -> list:
             content = inline(tokens[i + 1])
             lvl = tok.tag  # h1..h6
             if lvl == "h1" and not got_title:
-                title = re.sub("<[^>]+>", "", content)
+                # titre + sous-titre : déjà rendus sur la page de garde -> on saute
                 got_title = True
-                # sous-titre = paragraphe qui suit immédiatement le titre, s'il existe
                 nxt = i + 3
-                if nxt < len(tokens) and tokens[nxt].type == "paragraph_open":
-                    subtitle = re.sub("<[^>]+>", "", inline(tokens[nxt + 1]))
-                    i = nxt + 3
-                else:
-                    i = nxt
-                story.insert(0, header_band(title, subtitle))
-                story.insert(1, Spacer(1, 16))
+                i = nxt + 3 if (nxt < len(tokens) and tokens[nxt].type == "paragraph_open") else nxt
+                continue
+            if lvl == "h1":
+                # séparateur de partie (le `---` du Markdown a déjà forcé le saut de page)
+                plain = re.sub("<[^>]+>", "", content)
+                m = re.match(r"Partie\s+([IVX]+)\s*[—-]\s*(.+)", plain)
+                badge = f"PARTIE {m.group(1)} · ÉVOLUTION DU SUJET" if m else "PARTIE II"
+                dtitle = m.group(2).strip() if m else plain
+                i += 3
+                story.append(Spacer(1, 26))
+                story.append(part_divider(badge, dtitle))
+                story.append(Spacer(1, 12))
                 continue
             style = {"h1": "h1", "h2": "h2", "h3": "h3"}.get(lvl, "h3")
             heading = Paragraph(content, ST[style])
@@ -298,7 +390,7 @@ def build_story(md_text: str) -> list:
 
             # Réserve courte : juste de quoi éviter un titre en dernière ligne.
             # Le KeepTogether ci-dessous fait le vrai travail anti-coupure.
-            reserve = 40 * mm if _section_has_image(tokens, i, lvl) else 30 * mm
+            reserve = 48 * mm if _section_has_image(tokens, i, lvl) else 30 * mm
             story.append(CondPageBreak(reserve))
             story.append(KeepTogether(block) if len(block) > 1 else heading)
             story.extend(trailing)
@@ -327,9 +419,9 @@ def build_story(md_text: str) -> list:
             items = list_stack.pop()
             bullet = "bullet" if tt == "bullet_list_close" else "1"
             lf = ListFlowable(
-                [ListItem(it, leftIndent=6) for it in items],
-                bulletType=bullet, bulletColor=ACCENT, bulletFontSize=7,
-                leftIndent=12, spaceBefore=2, spaceAfter=6,
+                [ListItem(it, leftIndent=8) for it in items],
+                bulletType=bullet, bulletColor=ACCENT, bulletFontSize=9,
+                bulletOffsetY=-0.5, leftIndent=16, spaceBefore=2, spaceAfter=6,
             )
             (list_stack[-1] if list_stack else story).append(lf)
             i += 1
