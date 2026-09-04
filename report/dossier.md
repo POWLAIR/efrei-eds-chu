@@ -3,10 +3,11 @@
 Dossier d'architecture et de traitements — pipeline ELT médaillon sur ClickHouse, restitution Metabase, automatisation tracée.
 
 ```kpi
-Sources | 6 (+3 évol.)
-Jours ingérés | 28 (+ 2026-08-29)
 Séjours fiables | 6 729
-Actes (fait ajouté) | 8 112
+Actes médicaux | 8 112
+Réadmission 30 j | 11,59 %
+Indicateurs (KPI) | 13
+Cloisonnement | 2 niveaux
 Contrôles verify | 12/12
 ```
 
@@ -35,8 +36,8 @@ Le CHU dépose chaque jour ses fichiers dans `source-filestorage/<source>/<AAAA-
 | `sejours.csv` | CSV | 6 797 séjours (≈ 40 à 310 / jour) | `discharge_ts` parfois vide = séjour en cours |
 | `diagnostics.json` | JSON imbriqué | ~40 Ko / jour | un ou plusieurs codes CIM-10 par séjour (`principal` / `associe`) |
 | `monitoring.parquet` | Parquet | 41 778 relevés (flux volumineux par nature) | constantes au chevet (FC, SpO2, température) |
-| `referentiels/services.csv` | CSV | 8 services | déposé **le premier jour uniquement** (2026-08-01) |
-| `referentiels/cim10.csv` | CSV | 13 codes | idem |
+| `services.csv` | CSV | 8 services | référentiel `referentiels/`, déposé **le premier jour uniquement** (2026-08-01) |
+| `cim10.csv` | CSV | 13 codes | idem |
 
 Les `patients` sont livrés en instantané complet : 18 000 lignes brutes (3 × 6 000) correspondent à **6 000 patients distincts**, dédupliqués en silver.
 
@@ -345,11 +346,11 @@ Le flux monitoring est le plus volumineux et grossira. Le traiter comme un **flu
 
 Le CHU **ajoute** des données (il n'en modifie aucune), dans un dépôt daté **2026-08-29** :
 
-| Fichier | Format | Contenu | Volume |
+| Fichier (dépôt `2026-08-29/`) | Format | Contenu | Volume |
 |---|---|---|---|
-| `referentiels/2026-08-29/description_service.csv` | CSV | enrichit les services : `categorie`, `capacite_lits`, `pole` | 7 lignes (**NEURO absent**) |
-| `referentiels/2026-08-29/ccam.csv` | CSV | nomenclature des actes : `code_ccam`, `libelle`, `tarif_euros` (T2A) | 8 codes |
-| `actes/2026-08-29/actes.parquet` | Parquet | nouveau **flux de faits** : `stay_id`, `code_ccam`, `acte_ts` | 8 112 actes |
+| `description_service.csv` | CSV | enrichit les services : `categorie`, `capacite_lits`, `pole` | 7 lignes (**NEURO absent**) |
+| `ccam.csv` | CSV | nomenclature des actes : `code_ccam`, `libelle`, `tarif_euros` (T2A) | 8 codes |
+| `actes.parquet` | Parquet | nouveau **flux de faits** : `stay_id`, `code_ccam`, `acte_ts` | 8 112 actes |
 
 `service_label → categorie → pole` sont **trois niveaux d'agrégation croissants** du même
 axe « service » (analyser par service, par catégorie, par pôle) — une hiérarchie, pas une
