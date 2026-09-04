@@ -118,6 +118,7 @@ Principe imposé par le sujet : le traitement attendu est **simple** — on **é
 | sejours | `discharge_ts < admission_ts` (incohérence temporelle) | 68 |
 | diagnostics | `stay_id` totalement inconnu du bronze · `code_cim10` hors référentiel | 0 (aucun cas sur ce jeu) |
 | sejours / patients | `birth_year` aberrant · durée > 180 j · service hors référentiel · sexe non normalisable | 0 (aucun cas sur ce jeu) |
+| referentiels | `service_sans_description` (service absent de la description — **audit, pas exclusion**) | 1 (NEURO) — cf. § 13 |
 
 > Les **127 diagnostics** portés par les 68 séjours écartés pour incohérence de dates ne
 > sont **plus rejetés** : l'erreur est sur les *dates* du séjour, pas sur le codage — la
@@ -247,7 +248,7 @@ reproduits, hors périmètre `ro_recherche`, dans le comparatif § 16.
 
 ### Justification des chiffres
 
-`make verify` exécute **9 contrôles** de réconciliation qui **garantissent** ces valeurs :
+`make verify` exécute **12 contrôles** de réconciliation (dont 9 portent sur la Partie I) qui **garantissent** ces valeurs :
 
 - `count(gold.fact_sejour)` = `count(silver.sejours)` = 6 729 ;
 - tout `stay_id` de silver provient du bronze et n'a pas été écarté par ailleurs ;
@@ -262,7 +263,7 @@ reproduits, hors périmètre `ro_recherche`, dans le comparatif § 16.
 
 ## 8. Visualisations
 
-Deux dashboards Metabase provisionnés **automatiquement** et de façon idempotente par `make dashboards` (API REST, `pipeline/steps/4_dashboards.py`).
+Deux dashboards Metabase pour la Partie I, provisionnés **automatiquement** et de façon idempotente par `make dashboards` (API REST, `pipeline/steps/4_dashboards.py`). Un **3e dashboard** *« Pilotage — plateau technique & T2A »* est ajouté par l'évolution du sujet (§ 15).
 
 ### Dashboard « Pilotage hospitalier »
 

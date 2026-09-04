@@ -97,7 +97,9 @@ def inline(tok) -> str:
             out.append("<i>")
         elif t == "em_close":
             out.append("</i>")
-        elif t == "softbreak" or t == "hardbreak":
+        elif t == "softbreak":
+            out.append(" ")  # CommonMark : un retour à la ligne simple = une espace
+        elif t == "hardbreak":
             out.append("<br/>")
         elif t == "link_open":
             href = dict(c.attrs).get("href", "")
@@ -115,10 +117,8 @@ def split_images(tok):
     for c in tok.children or []:
         if c.type == "image":
             imgs.append((dict(c.attrs).get("src", ""), c.content or ""))
-        elif c.type in ("softbreak", "hardbreak"):
-            continue
         else:
-            text_children.append(c)
+            text_children.append(c)  # softbreak/hardbreak compris (gérés par inline())
     clone = type(tok)("inline", "", 0)
     clone.children = text_children
     return imgs, inline(clone)

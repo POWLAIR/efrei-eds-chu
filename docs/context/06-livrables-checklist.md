@@ -2,13 +2,15 @@
 
 ## Partie 1 — Interface d'analyse
 
-- [x] **Dossier** : `report/dossier.md` (11 sections) → `report/dossier.pdf` via `make report`
-      (design corporate repris du skill `rapport-performance-pdf`) ; schémas mermaid dans
-      `report/schemas/` — `bronze` · `architecture` · `silver` · `etoile` (`make schema`)
-- [x] **Interface** : 2 dashboards Metabase, provisionnés par `make dashboards` (idempotent)
-  - [x] Dashboard **Pilotage** (6 cartes) : DMS, urgences/jour, réadmission 30 j, alertes
-        constantes, charge par service, modes de sortie
-  - [x] Dashboard **Recherche** : prévalence par pathologie, cohorte âge × sexe
+- [x] **Dossier** : `report/dossier.md` (17 sections — Partie I § 1-11, Partie II § 12-17)
+      → `report/dossier.pdf` via `make report` (design corporate repris du skill
+      `rapport-performance-pdf`) ; schémas mermaid dans `report/schemas/` — `architecture` ·
+      `bronze` · `silver` · `etoile` · `silver-v2` · `etoile-v2` (`make schema`)
+- [x] **Interface** : 2 dashboards Metabase Partie I (+ 1 dashboard évolution, cf. plus bas),
+      provisionnés par `make dashboards` (idempotent)
+  - [x] Dashboard **Pilotage** (6 cartes) : DMS, activité urgences/jour, réadmission 30 j,
+        alertes constantes, charge par service, modes de sortie
+  - [x] Dashboard **Recherche** : prévalence par pathologie, cohorte pathologie × âge × sexe
   - [x] **Démonstration du cloisonnement** : `dashboards/captures/01-*` (base/collection),
         `02-*` (RBAC ClickHouse `ACCESS_DENIED`) ; détails `dashboards/README.md`
   - [x] Reproductible : définition dans `CARDS` / `DASHBOARDS` (`pipeline/steps/4_dashboards.py`),
@@ -57,7 +59,7 @@
 - [x] Les dashboards sont documentés et reproductibles (`dashboards/README.md` + captures)
 - [x] `README.md` : comment lancer & rejouer
 - [x] `make all` fonctionne à froid (up + init-db + ingest + transform + verify + dashboards)
-- [x] `uv run pytest` au vert (12 tests)
+- [x] `uv run pytest` au vert (17 tests) ; `make verify` 12/12
 - [x] Le rapport PDF + les schémas (PNG) sont dans `report/`
 - [x] **Premier commit Git** (`.env` et `data/lake/` non committés — `.gitignore` OK ;
       jeu source synthétique versionné volontairement)
